@@ -1,10 +1,13 @@
 io/opentrace/core/IdGenerator.class
 io/opentrace/core/OpenTraceConfig.class
 io/opentrace/core/OpenTrace.class
-io/opentrace/core/TraceBatcher.class
-io/opentrace/core/TraceState.class
+io/opentrace/core/RootScope.class
 io/opentrace/core/Trace.class
 io/opentrace/core/exporter/SpanExporter.class
 io/opentrace/core/Span.class
 io/opentrace/core/exporter/ConsoleExporter.class
+io/opentrace/core/NameRegistry.class
+io/opentrace/core/SpanScope.class
+io/opentrace/core/TraceBatcher.class
+io/opentrace/core/TraceState.class
 io/opentrace/core/OpenTraceBuilder.class
