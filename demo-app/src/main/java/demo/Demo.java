@@ -5,19 +5,15 @@ import io.opentrace.core.OpenTrace;
 public class Demo{
     public static void main(String[] args){
         OpenTrace tracer=OpenTrace.builder().build();
-        
-        tracer.startRoot("order");
 
-        tracer.startSpan("validate");
-        sleep(20);
-        tracer.endSpan();
-
-        tracer.startSpan("payment");
-        sleep(50);
-        tracer.endSpan();
-
-        tracer.endRoot();
-
+        try(var root=tracer.root("order")){
+            try(var span=tracer.span("validate")){
+                sleep(20);
+            }
+            try(var span=tracer.span("payment")){
+                sleep(50);
+            }
+        }
         sleep(2000);
         tracer.shutdown();
     }
