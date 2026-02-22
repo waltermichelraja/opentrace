@@ -7,4 +7,6 @@ public final class Span{
     public long duration;
     public int nameId;
     public boolean error;
+    public String errorType;
+    public String errorMessage;
 }

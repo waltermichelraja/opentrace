@@ -21,15 +21,16 @@ public final class OpenTrace{
         startSpan(name);
     }
 
-    public void startSpan(String name){
+    public Span startSpan(String name){
         TraceState state=current.get();
-        if(state==null){return;}
+        if(state==null){return null;}
         Span span=new Span();
         span.spanId=idGenerator.next();
         span.parentSpanId=state.stack.isEmpty()?0:state.stack.peek().spanId;
         span.startTime=System.nanoTime();
         span.nameId=nameRegistry.id(name);
         state.stack.push(span);
+        return span;
     }
 
     public void endSpan(){
@@ -54,13 +55,41 @@ public final class OpenTrace{
     }
 
     public SpanScope span(String name){
-        startSpan(name);
-        return new SpanScope(this);
+        Span span=startSpan(name);
+        return new SpanScope(this, span);
     }
 
     public RootScope root(String name){
         if(current.get()!=null){throw new IllegalStateException("root span already active in this thread");}
         startRoot(name);
         return new RootScope(this);
+    }
+
+    public void trace(String name, Runnable block){
+        Span span=startSpan(name);
+        try{
+            block.run();
+        }catch(Throwable t){
+            if(span!=null){
+                span.error=true;
+                span.errorType=t.getClass().getSimpleName();
+                span.errorMessage=t.getMessage();
+            }
+            throw t;
+        }finally{endSpan();}
+    }
+
+    public <T> T trace(String name, java.util.function.Supplier<T> block){
+        Span span=startSpan(name);
+        try{
+            return block.get();
+        }catch(Throwable t){
+            if(span!=null){
+                span.error=true;
+                span.errorType=t.getClass().getSimpleName();
+                span.errorMessage=t.getMessage();
+            }
+            throw t;
+        }finally{endSpan();}
     }
 }

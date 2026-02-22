@@ -31,6 +31,12 @@ public final class ConsoleExporter implements SpanExporter{
         Map<String,Object> spanMap=new LinkedHashMap<>();
         spanMap.put("name", trace.resolveName(span.nameId));
         spanMap.put("durationMs", span.duration/1_000_000.0);
+        if(span.error){
+            Map<String,Object> errorMap=new LinkedHashMap<>();
+            errorMap.put("type", span.errorType);
+            errorMap.put("message", span.errorMessage);
+            spanMap.put("error", errorMap);
+        }
         List<Map<String,Object>> childrenList=new ArrayList<>();
         List<Span> children=childrenMap.get(span.spanId);
         if(children!=null){
