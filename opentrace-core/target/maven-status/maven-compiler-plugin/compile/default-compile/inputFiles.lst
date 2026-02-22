@@ -1,13 +1,17 @@
+/home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/sampling/ProbabilitySampler.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/OpenTraceConfig.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/NameRegistry.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/IdGenerator.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/exporter/SpanExporter.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/TraceBatcher.java
+/home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/sampling/AlwaysOnSampler.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/OpenTrace.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/RootScope.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/TraceState.java
+/home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/sampling/Sampler.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/SpanScope.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/exporter/ConsoleExporter.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/Span.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/Trace.java
+/home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/sampling/AlwaysOffSampler.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/OpenTraceBuilder.java

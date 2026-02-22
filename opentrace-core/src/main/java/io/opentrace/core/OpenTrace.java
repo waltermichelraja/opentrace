@@ -1,13 +1,17 @@
 package io.opentrace.core;
 
+import io.opentrace.core.sampling.Sampler;
+
 public final class OpenTrace{
     private final IdGenerator idGenerator=new IdGenerator();
     private final NameRegistry nameRegistry=new NameRegistry();
     private final ThreadLocal<TraceState> current=new ThreadLocal<>();
     private final TraceBatcher batcher;
+    private final Sampler sampler;
 
     OpenTrace(OpenTraceConfig config){
         this.batcher=new TraceBatcher(config);
+        this.sampler=config.sampler;
     }
 
     public static OpenTraceBuilder builder(){
@@ -15,6 +19,10 @@ public final class OpenTrace{
     }
 
     public void startRoot(String name){
+        if(!sampler.shouldSample()){
+            current.remove();
+            return;
+        }
         TraceState state=new TraceState();
         state.traceId=idGenerator.next();
         current.set(state);
