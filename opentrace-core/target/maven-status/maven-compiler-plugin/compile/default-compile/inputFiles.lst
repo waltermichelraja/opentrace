@@ -4,6 +4,7 @@
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/IdGenerator.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/exporter/SpanExporter.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/TraceBatcher.java
+/home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/SpanStatus.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/sampling/AlwaysOnSampler.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/OpenTrace.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/RootScope.java

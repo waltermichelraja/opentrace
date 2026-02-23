@@ -10,9 +10,19 @@ public final class SpanScope implements AutoCloseable{
         this.span=span;
     }
 
+    public SpanScope setAttribute(String key, Object value){
+        if(span!=null){
+            if(span.attributes==null){
+                span.attributes=new java.util.LinkedHashMap<>();
+            }
+            span.attributes.put(key, value);
+        }
+        return this;
+    }
+
     public void error(Throwable t){
         if(span!=null){
-            span.error=true;
+            span.status=SpanStatus.ERROR;
             span.errorType=t.getClass().getSimpleName();
             span.errorMessage=t.getMessage();
         }

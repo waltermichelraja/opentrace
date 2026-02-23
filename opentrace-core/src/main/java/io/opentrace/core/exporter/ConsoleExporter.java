@@ -18,27 +18,35 @@ public final class ConsoleExporter implements SpanExporter{
         Map<Long,List<Span>> childrenMap=new HashMap<>();
         Span root=null;
         for(Span span:trace.spans){
-            if(span.parentSpanId==0){root=span;}
-            childrenMap.computeIfAbsent(span.parentSpanId,k->new ArrayList<>()).add(span);
+            if(span.getParentSpanId()==0){root=span;}
+            childrenMap.computeIfAbsent(span.getParentSpanId(), k->new ArrayList<>()).add(span);
         }
         Map<String,Object> result=new LinkedHashMap<>();
         result.put("traceId", trace.traceId);
-        if(root!=null){result.put("root", buildSpanMap(root,childrenMap,trace));}
+        result.put("serviceName", trace.serviceName);
+        result.put("environment", trace.environment);
+        result.put("serviceVersion", trace.serviceVersion);
+        if(root!=null){result.put("root", buildSpanMap(root, childrenMap, trace));}
         return result;
     }
 
     private Map<String,Object> buildSpanMap(Span span, Map<Long,List<Span>> childrenMap, Trace trace){
         Map<String,Object> spanMap=new LinkedHashMap<>();
-        spanMap.put("name", trace.resolveName(span.nameId));
-        spanMap.put("durationMs", span.duration/1_000_000.0);
-        if(span.error){
+        spanMap.put("name", trace.resolveName(span.getNameId()));
+        spanMap.put("durationMs", span.getDuration()/1_000_000.0);
+        spanMap.put("status", span.getStatus().name());
+        if(span.getStatus()==io.opentrace.core.SpanStatus.ERROR){
             Map<String,Object> errorMap=new LinkedHashMap<>();
-            errorMap.put("type", span.errorType);
-            errorMap.put("message", span.errorMessage);
+            errorMap.put("type", span.getErrorType());
+            errorMap.put("message", span.getErrorMessage());
             spanMap.put("error", errorMap);
         }
+        Map<String,Object> attributes=span.getAttributes();
+        if(attributes!=null && !attributes.isEmpty()){
+            spanMap.put("attributes", attributes);
+        }
         List<Map<String,Object>> childrenList=new ArrayList<>();
-        List<Span> children=childrenMap.get(span.spanId);
+        List<Span> children=childrenMap.get(span.getSpanId());
         if(children!=null){
             for(Span child:children){
                 childrenList.add(buildSpanMap(child, childrenMap, trace));
@@ -68,7 +76,7 @@ public final class ConsoleExporter implements SpanExporter{
             sb.append("[");
             boolean first=true;
             for(Object item:(List<?>)obj){
-                if(!first)sb.append(",");
+                if(!first){sb.append(",");}
                 first=false;
                 sb.append(toJson(item));
             }

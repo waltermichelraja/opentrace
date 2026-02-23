@@ -13,5 +13,6 @@ io/opentrace/core/SpanScope.class
 io/opentrace/core/sampling/Sampler.class
 io/opentrace/core/TraceBatcher.class
 io/opentrace/core/sampling/ProbabilitySampler.class
+io/opentrace/core/SpanStatus.class
 io/opentrace/core/TraceState.class
 io/opentrace/core/OpenTraceBuilder.class

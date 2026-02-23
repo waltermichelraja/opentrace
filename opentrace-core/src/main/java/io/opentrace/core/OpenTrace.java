@@ -8,10 +8,16 @@ public final class OpenTrace{
     private final ThreadLocal<TraceState> current=new ThreadLocal<>();
     private final TraceBatcher batcher;
     private final Sampler sampler;
+    private final String serviceName;
+    private final String environment;
+    private final String serviceVersion;
 
     OpenTrace(OpenTraceConfig config){
         this.batcher=new TraceBatcher(config);
         this.sampler=config.sampler;
+        this.serviceName=config.serviceName;
+        this.environment=config.environment;
+        this.serviceVersion=config.serviceVersion;
     }
 
     public static OpenTraceBuilder builder(){
@@ -53,7 +59,7 @@ public final class OpenTrace{
         TraceState state=current.get();
         if(state==null){return;}
         while(!state.stack.isEmpty()){endSpan();}
-        Trace trace=new Trace(state.traceId, state.spans, nameRegistry);
+        Trace trace=new Trace(state.traceId, state.spans, nameRegistry, serviceName, environment, serviceVersion);
         batcher.submit(trace);
         current.remove();
     }
@@ -79,7 +85,7 @@ public final class OpenTrace{
             block.run();
         }catch(Throwable t){
             if(span!=null){
-                span.error=true;
+                span.status=SpanStatus.ERROR;
                 span.errorType=t.getClass().getSimpleName();
                 span.errorMessage=t.getMessage();
             }
@@ -93,7 +99,7 @@ public final class OpenTrace{
             return block.get();
         }catch(Throwable t){
             if(span!=null){
-                span.error=true;
+                span.status=SpanStatus.ERROR;
                 span.errorType=t.getClass().getSimpleName();
                 span.errorMessage=t.getMessage();
             }

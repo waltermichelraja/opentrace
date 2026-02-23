@@ -11,7 +11,26 @@ public final class OpenTraceBuilder{
     private int queueCapacity=10000;
     private SpanExporter exporter=new ConsoleExporter();
 
+    private String serviceName="unknown-service";
+    private String environment="dev";
+    private String serviceVersion="0.0.1";
+
     private Sampler sampler=new AlwaysOnSampler();
+
+    public OpenTraceBuilder serviceName(String name){
+        this.serviceName=name;
+        return this;
+    }
+
+    public OpenTraceBuilder environment(String env){
+        this.environment=env;
+        return this;
+    }
+
+    public OpenTraceBuilder serviceVersion(String version){
+        this.serviceVersion=version;
+        return this;
+    }
 
     public OpenTraceBuilder batchSize(int batchSize){
         this.batchSize=batchSize;
@@ -29,7 +48,7 @@ public final class OpenTraceBuilder{
     }
 
     public OpenTrace build(){
-        OpenTraceConfig config=new OpenTraceConfig(batchSize, queueCapacity, exporter, sampler);
+        OpenTraceConfig config=new OpenTraceConfig(batchSize, queueCapacity, exporter, sampler, serviceName, environment, serviceVersion);
         return new OpenTrace(config);
     }
 
