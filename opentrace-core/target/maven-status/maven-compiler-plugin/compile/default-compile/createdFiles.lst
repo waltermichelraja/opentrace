@@ -1,6 +1,7 @@
 io/opentrace/core/IdGenerator.class
 io/opentrace/core/OpenTraceConfig.class
 io/opentrace/core/OpenTrace.class
+io/opentrace/core/propagation/OpenTraceHeaders.class
 io/opentrace/core/RootScope.class
 io/opentrace/core/sampling/AlwaysOffSampler.class
 io/opentrace/core/Trace.class
@@ -11,6 +12,7 @@ io/opentrace/core/exporter/ConsoleExporter.class
 io/opentrace/core/NameRegistry.class
 io/opentrace/core/SpanScope.class
 io/opentrace/core/sampling/Sampler.class
+io/opentrace/core/OpenTraceContext.class
 io/opentrace/core/TraceBatcher.class
 io/opentrace/core/sampling/ProbabilitySampler.class
 io/opentrace/core/SpanStatus.class
