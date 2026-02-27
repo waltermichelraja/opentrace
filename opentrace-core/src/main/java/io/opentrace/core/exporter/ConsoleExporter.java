@@ -16,9 +16,7 @@ public final class ConsoleExporter implements SpanExporter{
 
     private Map<String,Object> buildTraceMap(Trace trace){
         Map<Long,List<Span>> childrenMap=new HashMap<>();
-        Span root=null;
-        for(Span span:trace.spans){
-            if(span.getParentSpanId()==0){root=span;}
+        for(Span span: trace.spans){
             childrenMap.computeIfAbsent(span.getParentSpanId(), k->new ArrayList<>()).add(span);
         }
         Map<String,Object> result=new LinkedHashMap<>();
@@ -26,6 +24,14 @@ public final class ConsoleExporter implements SpanExporter{
         result.put("serviceName", trace.serviceName);
         result.put("environment", trace.environment);
         result.put("serviceVersion", trace.serviceVersion);
+        Span root=null;
+        for(Span span: trace.spans){
+            if(span.getParentSpanId()==0){
+                root=span;
+                break;
+            }
+        }
+        if(root==null && !trace.spans.isEmpty()){root=trace.spans.get(trace.spans.size()-1);}
         if(root!=null){result.put("root", buildSpanMap(root, childrenMap, trace));}
         return result;
     }
