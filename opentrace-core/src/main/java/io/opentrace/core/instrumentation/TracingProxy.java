@@ -9,25 +9,33 @@ public final class TracingProxy{
 
     @SuppressWarnings("unchecked")
     public static <T>T create(T target, OpenTrace tracer, Class<T> interfaceType){
-    InvocationHandler handler=(proxy, method, args)->{
-        Trace traceAnnotation=method.getAnnotation(Trace.class);
-        if(traceAnnotation==null){
-            Method targetMethod=target.getClass().getMethod(method.getName(), method.getParameterTypes());
-            traceAnnotation=targetMethod.getAnnotation(Trace.class);
-        }
-        
-        if(traceAnnotation==null){return method.invoke(target,args);}
-        String spanName=traceAnnotation.value().isEmpty()?method.getName():traceAnnotation.value();
-        return tracer.trace(spanName, ()->{
-            try{return method.invoke(target,args);}
-            catch(InvocationTargetException e){
-                Throwable cause=e.getTargetException();
-                if(cause instanceof RuntimeException){throw(RuntimeException)cause;}
-                if(cause instanceof Error){throw (Error)cause;}
-                throw new RuntimeException(cause);
-            }catch(IllegalAccessException e){throw new RuntimeException(e);}});
+        InvocationHandler handler=(proxy,method, args)->{
+            if(method.getDeclaringClass()==Object.class){return method.invoke(target, args);}
+            Trace methodTrace=method.getAnnotation(Trace.class);
+            if(methodTrace==null){
+                try{
+                    Method targetMethod=target.getClass().getMethod(method.getName(), method.getParameterTypes());
+                    methodTrace=targetMethod.getAnnotation(Trace.class);
+                }catch(NoSuchMethodException ignored){}
+            }
+            Trace interfaceTrace=interfaceType.getAnnotation(Trace.class);
+            Trace classTrace=target.getClass().getAnnotation(Trace.class);
+            if(methodTrace==null && interfaceTrace==null && classTrace==null){return method.invoke(target, args);}
+            String spanName;
+            if(methodTrace!=null && !methodTrace.value().isEmpty()){spanName=methodTrace.value();}
+            else{spanName=method.getName();}
+            return tracer.trace(spanName,()->{
+                try{return method.invoke(target, args);}
+                catch(InvocationTargetException e){
+                    Throwable cause=e.getTargetException();
+                    if(cause instanceof RuntimeException){throw (RuntimeException)cause;}
+                    if(cause instanceof Error){throw (Error)cause;}
+                    throw new RuntimeException(cause);
+                }catch(IllegalAccessException e){throw new RuntimeException(e);}
+            });
         };
-
-        return (T)Proxy.newProxyInstance(interfaceType.getClassLoader(), new Class<?>[]{interfaceType}, handler);
+        T proxy=(T)Proxy.newProxyInstance(interfaceType.getClassLoader(), new Class<?>[]{interfaceType},handler);
+        if(target instanceof SelfAware){((SelfAware<T>)target).setSelf(proxy);}
+        return proxy;
     }
 }

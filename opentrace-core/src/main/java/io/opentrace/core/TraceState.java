@@ -1,11 +1,16 @@
 package io.opentrace.core;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 final class TraceState{
-    public long traceId;
+    long traceId;
 
-    final ArrayDeque<Span> stack=new ArrayDeque<>();
-    final ArrayList<Span> spans=new ArrayList<>(16);
+    final Deque<Span> stack=new ArrayDeque<>();
+    final Queue<Span> spans;
+
+    TraceState(long traceId, Queue<Span> sharedSpans){
+        this.traceId=traceId;
+        this.spans=sharedSpans;
+    }
 }

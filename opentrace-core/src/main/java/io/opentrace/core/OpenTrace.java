@@ -1,5 +1,7 @@
 package io.opentrace.core;
 
+import java.util.function.Supplier;
+
 import io.opentrace.core.sampling.Sampler;
 
 public final class OpenTrace{
@@ -29,8 +31,9 @@ public final class OpenTrace{
             current.remove();
             return;
         }
-        TraceState state=new TraceState();
-        state.traceId=idGenerator.next();
+        long traceId=idGenerator.next();
+        java.util.concurrent.ConcurrentLinkedQueue<Span> sharedSpans=new java.util.concurrent.ConcurrentLinkedQueue<>();
+        TraceState state=new TraceState(traceId,sharedSpans);
         current.set(state);
         startSpan(name);
     }
@@ -59,7 +62,7 @@ public final class OpenTrace{
         TraceState state=current.get();
         if(state==null){return;}
         while(!state.stack.isEmpty()){endSpan();}
-        Trace trace=new Trace(state.traceId, state.spans, nameRegistry, serviceName, environment, serviceVersion);
+        Trace trace=new Trace(state.traceId, new java.util.ArrayList<>(state.spans), nameRegistry, serviceName, environment, serviceVersion);
         batcher.submit(trace);
         current.remove();
     }
@@ -89,7 +92,8 @@ public final class OpenTrace{
             current.remove();
             return new RootScope(this);
         }
-        TraceState state=new TraceState();
+        java.util.concurrent.ConcurrentLinkedQueue<Span> sharedSpans=new java.util.concurrent.ConcurrentLinkedQueue<>();
+        TraceState state=new TraceState(incoming.getTraceId(),sharedSpans);
         state.traceId=incoming.getTraceId();
         current.set(state);
         Span span=new Span();
@@ -149,14 +153,86 @@ public final class OpenTrace{
     }
 
     public OpenTraceContext extract(java.util.Map<String, String> headers){
-    if(headers==null){return null;}
-    String traceId=headers.get(
-        io.opentrace.core.propagation.OpenTraceHeaders.TRACE_ID);
-    String parentId=headers.get(
-        io.opentrace.core.propagation.OpenTraceHeaders.PARENT_ID);
-    if(traceId==null){return null;}
-    long tid=Long.parseLong(traceId);
-    long pid=parentId==null?0:Long.parseLong(parentId);
-    return new OpenTraceContext(tid, pid);
-}
+        if(headers==null){return null;}
+        String traceId=headers.get(
+            io.opentrace.core.propagation.OpenTraceHeaders.TRACE_ID);
+        String parentId=headers.get(
+            io.opentrace.core.propagation.OpenTraceHeaders.PARENT_ID);
+        if(traceId==null){return null;}
+        long tid=Long.parseLong(traceId);
+        long pid=parentId==null?0:Long.parseLong(parentId);
+        return new OpenTraceContext(tid, pid);
+    }
+
+    public Runnable wrap(Runnable task){
+        TraceState captured=current.get();
+        return ()->{
+            if(captured==null){
+                task.run();
+                return;
+            }
+            TraceState childState=new TraceState(captured.traceId, captured.spans);
+            Span syntheticParent=new Span();
+            syntheticParent.spanId=captured.stack.isEmpty()?0:captured.stack.peek().spanId;
+            childState.stack.push(syntheticParent);
+            current.set(childState);
+            try{
+                task.run();
+            }finally{
+                current.remove();
+            }
+        };
+    }
+
+    public <T>Supplier<T> wrap(Supplier<T> task){
+        TraceState captured=current.get();
+        return ()->{
+            if(captured==null){
+                return task.get();
+            }
+            TraceState childState=new TraceState(captured.traceId, captured.spans);
+            Span syntheticParent=new Span();
+            syntheticParent.spanId=captured.stack.isEmpty()?0:captured.stack.peek().spanId;
+            childState.stack.push(syntheticParent);
+            current.set(childState);
+            try{
+                return task.get();
+            }finally{
+                current.remove();
+            }
+        };
+    }
+
+    public java.util.concurrent.Executor wrapExecutor(java.util.concurrent.Executor delegate){
+        return command->{
+            Runnable wrapped = wrap(command);
+            delegate.execute(wrapped);
+        };
+    }
+
+    public java.util.concurrent.ExecutorService wrapExecutorService(java.util.concurrent.ExecutorService delegate){
+        return new java.util.concurrent.AbstractExecutorService(){
+            @Override
+            public void shutdown(){delegate.shutdown();}
+
+            @Override
+            public java.util.List<Runnable> shutdownNow(){return delegate.shutdownNow();}
+
+            @Override
+            public boolean isShutdown(){return delegate.isShutdown();}
+
+            @Override
+            public boolean isTerminated(){return delegate.isTerminated();}
+
+            @Override
+            public boolean awaitTermination(long timeout, java.util.concurrent.TimeUnit unit)throws InterruptedException{
+                return delegate.awaitTermination(timeout, unit);
+            }
+
+            @Override
+            public void execute(Runnable command){
+                delegate.execute(wrap(command));
+            }
+        };
+    }
 }
