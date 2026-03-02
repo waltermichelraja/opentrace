@@ -35,4 +35,8 @@ public final class SpanScope implements AutoCloseable{
             closed=true;
         }
     }
+
+    public void addEvent(String name){
+        if(span!=null){span.addEvent(name);}
+    }
 }
