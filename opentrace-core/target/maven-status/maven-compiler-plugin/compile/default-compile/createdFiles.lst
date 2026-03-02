@@ -22,4 +22,5 @@ io/opentrace/core/NameRegistry.class
 io/opentrace/core/SpanScope.class
 io/opentrace/core/OpenTrace$1.class
 io/opentrace/core/SpanEvent.class
+io/opentrace/core/SpanLink.class
 io/opentrace/core/TraceBatcher.class

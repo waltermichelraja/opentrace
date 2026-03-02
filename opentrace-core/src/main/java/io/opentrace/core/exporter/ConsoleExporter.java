@@ -61,6 +61,16 @@ public final class ConsoleExporter implements SpanExporter{
             }
             spanMap.put("events", eventsList);
         }
+        if(!span.getLinks().isEmpty()){
+            java.util.List<java.util.Map<String,Object>> linksList=new java.util.ArrayList<>();
+            for(io.opentrace.core.SpanLink link:span.getLinks()){
+                java.util.Map<String,Object> l=new java.util.LinkedHashMap<>();
+                l.put("traceId", link.getTraceId());
+                l.put("spanId", link.getSpanId());
+                linksList.add(l);
+            }
+            spanMap.put("links", linksList);
+        }
         List<Map<String,Object>> childrenList=new ArrayList<>();
         List<Span> children=childrenMap.get(span.getSpanId());
         if(children!=null){

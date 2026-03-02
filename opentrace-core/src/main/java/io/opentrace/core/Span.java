@@ -11,6 +11,7 @@ public final class Span{
     String errorMessage;
     java.util.Map<String,Object> attributes;
     private final java.util.List<SpanEvent> events=java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+    private final java.util.List<SpanLink> links=new java.util.ArrayList<>();
 
     public long getSpanId(){
         return spanId;
@@ -44,5 +45,12 @@ public final class Span{
     }
     public java.util.List<SpanEvent> getEvents(){
         return events;
+    }
+    public void addLink(long traceId, long spanId){
+        links.add(new SpanLink(traceId, spanId));
+    }
+
+    public java.util.List<SpanLink> getLinks(){
+        return links;
     }
 }
