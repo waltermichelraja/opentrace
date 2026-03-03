@@ -1,5 +1,11 @@
 package io.opentrace.core;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Supplier;
+
 import io.opentrace.core.sampling.Sampler;
 
 public final class OpenTrace{
@@ -29,8 +35,8 @@ public final class OpenTrace{
             current.remove();
             return;
         }
-        TraceState state=new TraceState();
-        state.traceId=idGenerator.next();
+        long traceId=idGenerator.next();
+        TraceState state=new TraceState(traceId, new ConcurrentLinkedQueue<>(), new ConcurrentHashMap<>());
         current.set(state);
         startSpan(name);
     }
@@ -59,13 +65,9 @@ public final class OpenTrace{
         TraceState state=current.get();
         if(state==null){return;}
         while(!state.stack.isEmpty()){endSpan();}
-        Trace trace=new Trace(state.traceId, state.spans, nameRegistry, serviceName, environment, serviceVersion);
+        Trace trace=new Trace(state.traceId, new java.util.ArrayList<>(state.spans), nameRegistry, serviceName, environment, serviceVersion);
         batcher.submit(trace);
         current.remove();
-    }
-
-    public void shutdown(){
-        batcher.shutdown();
     }
 
     public SpanScope span(String name){
@@ -89,8 +91,7 @@ public final class OpenTrace{
             current.remove();
             return new RootScope(this);
         }
-        TraceState state=new TraceState();
-        state.traceId=incoming.getTraceId();
+        TraceState state=new TraceState(incoming.getTraceId(), new ConcurrentLinkedQueue<>(), new ConcurrentHashMap<>(incoming.getBaggage()));
         current.set(state);
         Span span=new Span();
         span.spanId=idGenerator.next();
@@ -99,6 +100,13 @@ public final class OpenTrace{
         span.nameId=nameRegistry.id(name);
         state.stack.push(span);
         return new RootScope(this);
+    }
+
+    public OpenTraceContext currentContext(){
+        TraceState state=current.get();
+        if(state==null){return null;}
+        long parentSpanId=state.stack.isEmpty()?0:state.stack.peek().spanId;
+        return new OpenTraceContext(state.traceId, parentSpanId, new HashMap<>(state.baggage));
     }
 
     public void trace(String name, Runnable block){
@@ -129,13 +137,6 @@ public final class OpenTrace{
         }finally{endSpan();}
     }
 
-    public OpenTraceContext currentContext(){
-        TraceState state=current.get();
-        if(state==null){return null;}
-        long parentSpanId=state.stack.isEmpty()?0:state.stack.peek().spanId;
-        return new OpenTraceContext(state.traceId,parentSpanId);
-    }
-
     public java.util.Map<String,String> inject(OpenTraceContext ctx){
         if(ctx==null){return java.util.Collections.emptyMap();}
         java.util.Map<String,String> map=new java.util.HashMap<>();
@@ -145,18 +146,115 @@ public final class OpenTrace{
         map.put(
             io.opentrace.core.propagation.OpenTraceHeaders.PARENT_ID,
             String.valueOf(ctx.getParentSpanId()));
+        for(Map.Entry<String,String> e: ctx.getBaggage().entrySet()){
+            map.put("ot-baggage-"+e.getKey(), e.getValue());
+        }
         return map;
     }
 
     public OpenTraceContext extract(java.util.Map<String, String> headers){
-    if(headers==null){return null;}
-    String traceId=headers.get(
-        io.opentrace.core.propagation.OpenTraceHeaders.TRACE_ID);
-    String parentId=headers.get(
-        io.opentrace.core.propagation.OpenTraceHeaders.PARENT_ID);
-    if(traceId==null){return null;}
-    long tid=Long.parseLong(traceId);
-    long pid=parentId==null?0:Long.parseLong(parentId);
-    return new OpenTraceContext(tid, pid);
-}
+        if(headers==null){return null;}
+        String traceId=headers.get(io.opentrace.core.propagation.OpenTraceHeaders.TRACE_ID);
+        if(traceId==null){return null;}
+        String parentId=headers.get(io.opentrace.core.propagation.OpenTraceHeaders.PARENT_ID);
+        Map<String,String> baggage=new HashMap<>();
+        for(Map.Entry<String,String> e:headers.entrySet()){
+            if(e.getKey().startsWith("ot-baggage-")){
+                baggage.put(e.getKey().substring(11), e.getValue());
+            }
+        }
+        long tid=Long.parseLong(traceId);
+        long pid=parentId==null?0:Long.parseLong(parentId);
+        return new OpenTraceContext(tid,pid,baggage);
+    }
+
+
+    public Runnable wrap(Runnable task){
+        TraceState captured=current.get();
+        return ()->{
+            if(captured==null){
+                task.run();
+                return;
+            }
+            TraceState childState=new TraceState(captured.traceId, captured.spans, new ConcurrentHashMap<>(captured.baggage));
+            if(!captured.stack.isEmpty()){
+                Span syntheticParent=new Span();
+                syntheticParent.spanId=captured.stack.peek().spanId;
+                childState.stack.push(syntheticParent);
+            }
+            current.set(childState);
+            try{task.run();}
+            finally{current.remove();}
+        };
+    }
+
+    public <T>Supplier<T> wrap(Supplier<T> task){
+        TraceState captured=current.get();
+        return ()->{
+            if(captured==null){return task.get();}
+            TraceState childState=new TraceState(captured.traceId, captured.spans, new ConcurrentHashMap<>(captured.baggage));
+            if(!captured.stack.isEmpty()){
+                Span syntheticParent=new Span();
+                syntheticParent.spanId=captured.stack.peek().spanId;
+                childState.stack.push(syntheticParent);
+            }
+            current.set(childState);
+            try{return task.get();}
+            finally{current.remove();}
+        };
+    }
+
+    public java.util.concurrent.Executor wrapExecutor(java.util.concurrent.Executor delegate){
+        return command->{
+            Runnable wrapped=wrap(command);
+            delegate.execute(wrapped);
+        };
+    }
+
+    public java.util.concurrent.ExecutorService wrapExecutorService(java.util.concurrent.ExecutorService delegate){
+        return new java.util.concurrent.AbstractExecutorService(){
+            @Override
+            public void shutdown(){delegate.shutdown();}
+
+            @Override
+            public java.util.List<Runnable> shutdownNow(){return delegate.shutdownNow();}
+
+            @Override
+            public boolean isShutdown(){return delegate.isShutdown();}
+
+            @Override
+            public boolean isTerminated(){return delegate.isTerminated();}
+
+            @Override
+            public boolean awaitTermination(long timeout, java.util.concurrent.TimeUnit unit)throws InterruptedException{
+                return delegate.awaitTermination(timeout, unit);
+            }
+
+            @Override
+            public void execute(Runnable command){
+                delegate.execute(wrap(command));
+            }
+        };
+    }
+
+    public void putBaggage(String key, String value){
+        TraceState state=current.get();
+        if(state!=null){state.baggage.put(key, value);}
+    }
+
+    public String getBaggage(String key){
+        TraceState state=current.get();
+        if(state==null){return null;}
+        return state.baggage.get(key);
+    }
+
+    public java.util.Map<String,String> getAllBaggage(){
+        TraceState state=current.get();
+        if(state==null){return java.util.Collections.emptyMap();}
+        return java.util.Collections.unmodifiableMap(state.baggage);
+    }
+
+    public void shutdown(){
+        batcher.shutdown();
+    }
 }

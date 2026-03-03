@@ -1,11 +1,21 @@
 package io.opentrace.core;
 
+import java.util.Deque;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.Map;
 
 final class TraceState{
-    public long traceId;
+    final long traceId;
+    final ConcurrentLinkedQueue<Span> spans;
+    final Deque<Span> stack=new ArrayDeque<>();
+    final Map<String,String> baggage;
 
-    final ArrayDeque<Span> stack=new ArrayDeque<>();
-    final ArrayList<Span> spans=new ArrayList<>(16);
+    TraceState(long traceId, 
+               ConcurrentLinkedQueue<Span> spans, 
+               Map<String,String> baggage){
+        this.traceId=traceId;
+        this.spans=spans;
+        this.baggage=baggage;
+    }
 }
