@@ -1,5 +1,9 @@
 package io.opentrace.core;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Supplier;
 
 import io.opentrace.core.sampling.Sampler;
@@ -32,8 +36,7 @@ public final class OpenTrace{
             return;
         }
         long traceId=idGenerator.next();
-        java.util.concurrent.ConcurrentLinkedQueue<Span> sharedSpans=new java.util.concurrent.ConcurrentLinkedQueue<>();
-        TraceState state=new TraceState(traceId,sharedSpans);
+        TraceState state=new TraceState(traceId, new ConcurrentLinkedQueue<>(), new ConcurrentHashMap<>());
         current.set(state);
         startSpan(name);
     }
@@ -67,10 +70,6 @@ public final class OpenTrace{
         current.remove();
     }
 
-    public void shutdown(){
-        batcher.shutdown();
-    }
-
     public SpanScope span(String name){
         Span span=startSpan(name);
         return new SpanScope(this, span);
@@ -92,9 +91,7 @@ public final class OpenTrace{
             current.remove();
             return new RootScope(this);
         }
-        java.util.concurrent.ConcurrentLinkedQueue<Span> sharedSpans=new java.util.concurrent.ConcurrentLinkedQueue<>();
-        TraceState state=new TraceState(incoming.getTraceId(),sharedSpans);
-        state.traceId=incoming.getTraceId();
+        TraceState state=new TraceState(incoming.getTraceId(), new ConcurrentLinkedQueue<>(), new ConcurrentHashMap<>(incoming.getBaggage()));
         current.set(state);
         Span span=new Span();
         span.spanId=idGenerator.next();
@@ -103,6 +100,13 @@ public final class OpenTrace{
         span.nameId=nameRegistry.id(name);
         state.stack.push(span);
         return new RootScope(this);
+    }
+
+    public OpenTraceContext currentContext(){
+        TraceState state=current.get();
+        if(state==null){return null;}
+        long parentSpanId=state.stack.isEmpty()?0:state.stack.peek().spanId;
+        return new OpenTraceContext(state.traceId, parentSpanId, new HashMap<>(state.baggage));
     }
 
     public void trace(String name, Runnable block){
@@ -133,13 +137,6 @@ public final class OpenTrace{
         }finally{endSpan();}
     }
 
-    public OpenTraceContext currentContext(){
-        TraceState state=current.get();
-        if(state==null){return null;}
-        long parentSpanId=state.stack.isEmpty()?0:state.stack.peek().spanId;
-        return new OpenTraceContext(state.traceId,parentSpanId);
-    }
-
     public java.util.Map<String,String> inject(OpenTraceContext ctx){
         if(ctx==null){return java.util.Collections.emptyMap();}
         java.util.Map<String,String> map=new java.util.HashMap<>();
@@ -149,20 +146,28 @@ public final class OpenTrace{
         map.put(
             io.opentrace.core.propagation.OpenTraceHeaders.PARENT_ID,
             String.valueOf(ctx.getParentSpanId()));
+        for(Map.Entry<String,String> e: ctx.getBaggage().entrySet()){
+            map.put("ot-baggage-"+e.getKey(), e.getValue());
+        }
         return map;
     }
 
     public OpenTraceContext extract(java.util.Map<String, String> headers){
         if(headers==null){return null;}
-        String traceId=headers.get(
-            io.opentrace.core.propagation.OpenTraceHeaders.TRACE_ID);
-        String parentId=headers.get(
-            io.opentrace.core.propagation.OpenTraceHeaders.PARENT_ID);
+        String traceId=headers.get(io.opentrace.core.propagation.OpenTraceHeaders.TRACE_ID);
         if(traceId==null){return null;}
+        String parentId=headers.get(io.opentrace.core.propagation.OpenTraceHeaders.PARENT_ID);
+        Map<String,String> baggage=new HashMap<>();
+        for(Map.Entry<String,String> e:headers.entrySet()){
+            if(e.getKey().startsWith("ot-baggage-")){
+                baggage.put(e.getKey().substring(11), e.getValue());
+            }
+        }
         long tid=Long.parseLong(traceId);
         long pid=parentId==null?0:Long.parseLong(parentId);
-        return new OpenTraceContext(tid, pid);
+        return new OpenTraceContext(tid,pid,baggage);
     }
+
 
     public Runnable wrap(Runnable task){
         TraceState captured=current.get();
@@ -171,41 +176,37 @@ public final class OpenTrace{
                 task.run();
                 return;
             }
-            TraceState childState=new TraceState(captured.traceId, captured.spans);
-            Span syntheticParent=new Span();
-            syntheticParent.spanId=captured.stack.isEmpty()?0:captured.stack.peek().spanId;
-            childState.stack.push(syntheticParent);
-            current.set(childState);
-            try{
-                task.run();
-            }finally{
-                current.remove();
+            TraceState childState=new TraceState(captured.traceId, captured.spans, new ConcurrentHashMap<>(captured.baggage));
+            if(!captured.stack.isEmpty()){
+                Span syntheticParent=new Span();
+                syntheticParent.spanId=captured.stack.peek().spanId;
+                childState.stack.push(syntheticParent);
             }
+            current.set(childState);
+            try{task.run();}
+            finally{current.remove();}
         };
     }
 
     public <T>Supplier<T> wrap(Supplier<T> task){
         TraceState captured=current.get();
         return ()->{
-            if(captured==null){
-                return task.get();
+            if(captured==null){return task.get();}
+            TraceState childState=new TraceState(captured.traceId, captured.spans, new ConcurrentHashMap<>(captured.baggage));
+            if(!captured.stack.isEmpty()){
+                Span syntheticParent=new Span();
+                syntheticParent.spanId=captured.stack.peek().spanId;
+                childState.stack.push(syntheticParent);
             }
-            TraceState childState=new TraceState(captured.traceId, captured.spans);
-            Span syntheticParent=new Span();
-            syntheticParent.spanId=captured.stack.isEmpty()?0:captured.stack.peek().spanId;
-            childState.stack.push(syntheticParent);
             current.set(childState);
-            try{
-                return task.get();
-            }finally{
-                current.remove();
-            }
+            try{return task.get();}
+            finally{current.remove();}
         };
     }
 
     public java.util.concurrent.Executor wrapExecutor(java.util.concurrent.Executor delegate){
         return command->{
-            Runnable wrapped = wrap(command);
+            Runnable wrapped=wrap(command);
             delegate.execute(wrapped);
         };
     }
@@ -234,5 +235,26 @@ public final class OpenTrace{
                 delegate.execute(wrap(command));
             }
         };
+    }
+
+    public void putBaggage(String key, String value){
+        TraceState state=current.get();
+        if(state!=null){state.baggage.put(key, value);}
+    }
+
+    public String getBaggage(String key){
+        TraceState state=current.get();
+        if(state==null){return null;}
+        return state.baggage.get(key);
+    }
+
+    public java.util.Map<String,String> getAllBaggage(){
+        TraceState state=current.get();
+        if(state==null){return java.util.Collections.emptyMap();}
+        return java.util.Collections.unmodifiableMap(state.baggage);
+    }
+
+    public void shutdown(){
+        batcher.shutdown();
     }
 }
