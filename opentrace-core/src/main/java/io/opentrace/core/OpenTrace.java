@@ -14,16 +14,12 @@ public final class OpenTrace{
     private final ThreadLocal<TraceState> current=new ThreadLocal<>();
     private final TraceBatcher batcher;
     private final Sampler sampler;
-    private final String serviceName;
-    private final String environment;
-    private final String serviceVersion;
+    private final Resource resource;
 
     OpenTrace(OpenTraceConfig config){
         this.batcher=new TraceBatcher(config);
         this.sampler=config.sampler;
-        this.serviceName=config.serviceName;
-        this.environment=config.environment;
-        this.serviceVersion=config.serviceVersion;
+        this.resource=config.resource;
     }
 
     public static OpenTraceBuilder builder(){
@@ -65,7 +61,7 @@ public final class OpenTrace{
         TraceState state=current.get();
         if(state==null){return;}
         while(!state.stack.isEmpty()){endSpan();}
-        Trace trace=new Trace(state.traceId, new java.util.ArrayList<>(state.spans), nameRegistry, serviceName, environment, serviceVersion);
+        Trace trace=new Trace(state.traceId, new java.util.ArrayList<>(state.spans), nameRegistry, resource);
         batcher.submit(trace);
         current.remove();
     }

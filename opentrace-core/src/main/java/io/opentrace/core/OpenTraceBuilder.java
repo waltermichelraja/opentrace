@@ -1,5 +1,8 @@
 package io.opentrace.core;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import io.opentrace.core.exporter.ConsoleExporter;
 import io.opentrace.core.exporter.SpanExporter;
 import io.opentrace.core.sampling.AlwaysOnSampler;
@@ -48,7 +51,13 @@ public final class OpenTraceBuilder{
     }
 
     public OpenTrace build(){
-        OpenTraceConfig config=new OpenTraceConfig(batchSize, queueCapacity, exporter, sampler, serviceName, environment, serviceVersion);
+        OpenTraceConfig config=new OpenTraceConfig(batchSize, queueCapacity, exporter, sampler);
+        Map<String,String> attrs=new LinkedHashMap<>();
+        attrs.put("service.name", serviceName);
+        attrs.put("service.version", serviceVersion);
+        attrs.put("deployment.environment", environment);
+        Resource resource=new Resource(attrs);
+        config.resource=resource;
         return new OpenTrace(config);
     }
 

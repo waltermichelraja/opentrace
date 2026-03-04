@@ -21,9 +21,7 @@ public final class ConsoleExporter implements SpanExporter{
         }
         Map<String,Object> result=new LinkedHashMap<>();
         result.put("traceId", trace.traceId);
-        result.put("serviceName", trace.serviceName);
-        result.put("environment", trace.environment);
-        result.put("serviceVersion", trace.serviceVersion);
+        result.put("resource",trace.resource.getAttributes());
         Span root=null;
         for(Span span: trace.spans){
             if(span.getParentSpanId()==0){

@@ -8,17 +8,17 @@ final class OpenTraceConfig{
     final int queueCapacity;
     final SpanExporter exporter;
     final Sampler sampler;
-    final String serviceName;
-    final String environment;
-    final String serviceVersion;
+    Resource resource;
 
-    OpenTraceConfig(int batchSize, int queueCapacity, SpanExporter exporter, Sampler sampler, String serviceName, String environment, String serviceVersion){
+    OpenTraceConfig(int batchSize, int queueCapacity, SpanExporter exporter, Sampler sampler){
         this.batchSize=batchSize;
         this.queueCapacity=queueCapacity;
         this.exporter=exporter;
         this.sampler=sampler;
-        this.serviceName=serviceName;
-        this.environment=environment;
-        this.serviceVersion=serviceVersion;
+        // this.resource=new Resource(java.util.Map.of(
+        //     "service.name", serviceName,
+        //     "service.environment", environment,
+        //     "service.version", serviceVersion
+        // ));
     }
 }

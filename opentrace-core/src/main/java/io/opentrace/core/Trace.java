@@ -6,17 +6,14 @@ public final class Trace{
     public final long traceId;
     public final List<Span> spans;
     private final NameRegistry nameRegistry;
-    public final String serviceName;
-    public final String environment;
-    public final String serviceVersion;
+    public final Resource resource;
 
-    Trace(long traceId,List<Span> spans, NameRegistry nameRegistry, String serviceName, String environment, String serviceVersion){
+
+    public Trace(long traceId, List<Span> spans, NameRegistry nameRegistry, Resource resource){
         this.traceId=traceId;
         this.spans=spans;
         this.nameRegistry=nameRegistry;
-        this.serviceName=serviceName;
-        this.environment=environment;
-        this.serviceVersion=serviceVersion;
+        this.resource=resource;
     }
 
     public String resolveName(int nameId){
@@ -27,9 +24,14 @@ public final class Trace{
         StringBuilder sb=new StringBuilder();
         sb.append("{");
         sb.append("\"traceId\":").append(traceId).append(",");
-        sb.append("\"serviceName\":\"").append(serviceName).append("\",");
-        sb.append("\"environment\":\"").append(environment).append("\",");
-        sb.append("\"serviceVersion\":\"").append(serviceVersion).append("\",");
+        sb.append("\"resource\":{");
+        boolean first=true;
+        for(var entry: resource.getAttributes().entrySet()){
+            if(!first){sb.append(",");}
+            first=false;
+            sb.append("\"").append(entry.getKey()).append("\":\"").append(entry.getValue()).append("\"");
+        }
+        sb.append("},");
         Span root=findRoot();
         if(root!=null){
             sb.append("\"root\":");
