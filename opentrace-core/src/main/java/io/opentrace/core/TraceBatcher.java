@@ -1,6 +1,7 @@
 package io.opentrace.core;
 
 import io.opentrace.core.exporter.SpanExporter;
+import io.opentrace.core.metrics.SpanMetricsCollector;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,6 +13,7 @@ final class TraceBatcher{
     private final int batchSize;
     private volatile boolean running=true;
     private final Thread worker;
+    private final SpanMetricsCollector metrics=new SpanMetricsCollector();
 
     TraceBatcher(OpenTraceConfig config){
         this.queue=new LinkedBlockingQueue<>(config.queueCapacity);
@@ -37,7 +39,10 @@ final class TraceBatcher{
                         batch.add(t);
                     }
                 }
-                if(!batch.isEmpty()){exporter.export(batch);}
+                if(!batch.isEmpty()){
+                    for(Trace trace: batch){metrics.record(trace);}
+                    exporter.export(batch);
+                }
             }
         }catch(InterruptedException e){
             Thread.currentThread().interrupt();
@@ -55,10 +60,15 @@ final class TraceBatcher{
     void shutdown(){
         running=false;
         worker.interrupt();
-        try{
-            worker.join(2000);
-        }catch(InterruptedException ignored){
-            Thread.currentThread().interrupt();
-        }
+        try{worker.join(2000);}
+        catch(InterruptedException ignored){Thread.currentThread().interrupt();}
+
+        System.out.println("\nSPAN METRICS");
+        metrics.getMetrics().forEach((name, m)->{
+            System.out.printf(
+                "%s calls=%d errors=%d avg=%.2fms p95=%.2fms p99=%.2fms%n",
+                name,m.count(),m.errors(),m.avgMs(),m.percentile(0.95),m.percentile(0.99)
+            );
+        });
     }
 }

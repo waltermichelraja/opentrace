@@ -2,6 +2,7 @@ io/opentrace/core/IdGenerator.class
 io/opentrace/core/instrumentation/TracingProxy.class
 io/opentrace/core/OpenTraceConfig.class
 io/opentrace/core/propagation/OpenTraceHeaders.class
+io/opentrace/core/metrics/SpanMetricsCollector.class
 io/opentrace/core/Trace.class
 io/opentrace/core/exporter/SpanExporter.class
 io/opentrace/core/Span.class
@@ -13,6 +14,7 @@ io/opentrace/core/sampling/ProbabilitySampler.class
 io/opentrace/core/SpanStatus.class
 io/opentrace/core/TraceState.class
 io/opentrace/core/Resource.class
+io/opentrace/core/metrics/SpanMetrics.class
 io/opentrace/core/instrumentation/Trace.class
 io/opentrace/core/instrumentation/SelfAware.class
 io/opentrace/core/OpenTraceBuilder.class

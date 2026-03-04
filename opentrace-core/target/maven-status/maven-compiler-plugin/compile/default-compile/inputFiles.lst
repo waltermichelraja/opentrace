@@ -10,10 +10,12 @@
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/SpanEvent.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/SpanScope.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/instrumentation/TracingProxy.java
+/home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/metrics/SpanMetricsCollector.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/sampling/AlwaysOffSampler.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/sampling/ProbabilitySampler.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/IdGenerator.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/TraceBatcher.java
+/home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/metrics/SpanMetrics.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/OpenTraceContext.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/OpenTrace.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/TraceState.java
