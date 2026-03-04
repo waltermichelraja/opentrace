@@ -12,6 +12,7 @@ io/opentrace/core/OpenTraceContext.class
 io/opentrace/core/sampling/ProbabilitySampler.class
 io/opentrace/core/SpanStatus.class
 io/opentrace/core/TraceState.class
+io/opentrace/core/Resource.class
 io/opentrace/core/instrumentation/Trace.class
 io/opentrace/core/instrumentation/SelfAware.class
 io/opentrace/core/OpenTraceBuilder.class
