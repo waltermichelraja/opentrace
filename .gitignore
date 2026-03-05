@@ -1,0 +1,5 @@
+# tests
+/demo-app
+
+# build: opentarce-core
+/opentrace-core/target
