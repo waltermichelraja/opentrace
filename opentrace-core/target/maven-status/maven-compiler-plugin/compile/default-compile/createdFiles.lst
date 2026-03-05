@@ -16,6 +16,7 @@ io/opentrace/core/TraceState.class
 io/opentrace/core/Resource.class
 io/opentrace/core/metrics/SpanMetrics.class
 io/opentrace/core/instrumentation/Trace.class
+io/opentrace/core/instrumentation/http/TraceHttpClient.class
 io/opentrace/core/instrumentation/SelfAware.class
 io/opentrace/core/OpenTraceBuilder.class
 io/opentrace/core/OpenTrace.class
@@ -27,4 +28,4 @@ io/opentrace/core/OpenTrace$1.class
 io/opentrace/core/SpanEvent.class
 io/opentrace/core/SpanLink.class
 io/opentrace/core/TraceBatcher.class
-io/opentrace/core/instrumentation/http/TraceHttp.class
+io/opentrace/core/instrumentation/http/TraceHttpRequest.class

@@ -12,8 +12,8 @@
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/instrumentation/TracingProxy.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/metrics/SpanMetricsCollector.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/sampling/AlwaysOffSampler.java
-/home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/instrumentation/http/TraceHttp.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/sampling/ProbabilitySampler.java
+/home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/instrumentation/http/TraceHttpRequest.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/IdGenerator.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/TraceBatcher.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/metrics/SpanMetrics.java
@@ -22,6 +22,7 @@
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/TraceState.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/instrumentation/SelfAware.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/sampling/Sampler.java
+/home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/instrumentation/http/TraceHttpClient.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/exporter/ConsoleExporter.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/Resource.java
 /home/waltermichelraja/WorkSpace/java/projects/cloud/repositories/opentrace/opentrace-core/src/main/java/io/opentrace/core/Span.java
