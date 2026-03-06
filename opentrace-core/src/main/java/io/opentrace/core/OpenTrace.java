@@ -148,17 +148,18 @@ public final class OpenTrace{
         return map;
     }
 
-    public OpenTraceContext extract(java.util.Map<String, String> headers){
+    public OpenTraceContext extract(Map<String,String> headers){
         if(headers==null){return null;}
-        String traceId=headers.get(io.opentrace.core.propagation.OpenTraceHeaders.TRACE_ID);
-        if(traceId==null){return null;}
-        String parentId=headers.get(io.opentrace.core.propagation.OpenTraceHeaders.PARENT_ID);
+        String traceId=null;
+        String parentId=null;
         Map<String,String> baggage=new HashMap<>();
         for(Map.Entry<String,String> e:headers.entrySet()){
-            if(e.getKey().startsWith("ot-baggage-")){
-                baggage.put(e.getKey().substring(11), e.getValue());
-            }
+            String key=e.getKey().toLowerCase();
+            if(key.equals(io.opentrace.core.propagation.OpenTraceHeaders.TRACE_ID)){traceId=e.getValue();}
+            else if(key.equals(io.opentrace.core.propagation.OpenTraceHeaders.PARENT_ID)){parentId=e.getValue();}
+            else if(key.startsWith("ot-baggage-")){baggage.put(key.substring(11), e.getValue());}
         }
+        if(traceId==null){return null;}
         long tid=Long.parseLong(traceId);
         long pid=parentId==null?0:Long.parseLong(parentId);
         return new OpenTraceContext(tid,pid,baggage);
