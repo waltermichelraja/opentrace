@@ -19,6 +19,7 @@ public final class OpenTraceBuilder{
     private String serviceVersion="0.0.1";
 
     private Sampler sampler=new AlwaysOnSampler();
+    private boolean exportEnabled=true;
 
     public OpenTraceBuilder serviceName(String name){
         this.serviceName=name;
@@ -58,6 +59,7 @@ public final class OpenTraceBuilder{
         attrs.put("deployment.environment", environment);
         Resource resource=new Resource(attrs);
         config.resource=resource;
+        config.exportEnabled=this.exportEnabled;
         return new OpenTrace(config);
     }
 
@@ -69,6 +71,16 @@ public final class OpenTraceBuilder{
     public OpenTraceBuilder sampler(Sampler sampler){
         if(sampler==null){throw new IllegalArgumentException("sampler cannot be null");}
         this.sampler=sampler;
+        return this;
+    }
+
+    public OpenTraceBuilder disableExporter(){
+        this.exportEnabled=false;
+        return this;
+    }
+
+    public OpenTraceBuilder enableExporter(){
+        this.exportEnabled=true;
         return this;
     }
 }
