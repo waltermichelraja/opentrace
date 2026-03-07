@@ -11,14 +11,17 @@ final class TraceBatcher{
     private final BlockingQueue<Trace> queue;
     private final SpanExporter exporter;
     private final int batchSize;
+    private final boolean exportEnabled;
     private volatile boolean running=true;
     private final Thread worker;
+    private final List<Trace> completedTraces=new CopyOnWriteArrayList<>();
     private final SpanMetricsCollector metrics=new SpanMetricsCollector();
 
     TraceBatcher(OpenTraceConfig config){
         this.queue=new LinkedBlockingQueue<>(config.queueCapacity);
         this.exporter=config.exporter;
         this.batchSize=config.batchSize;
+        this.exportEnabled=config.exportEnabled;
         this.worker=new Thread(this::runWorker,"opentrace-worker");
         this.worker.setDaemon(true);
         this.worker.start();
@@ -40,8 +43,11 @@ final class TraceBatcher{
                     }
                 }
                 if(!batch.isEmpty()){
-                    for(Trace trace: batch){metrics.record(trace);}
-                    exporter.export(batch);
+                    for(Trace trace: batch){
+                        metrics.record(trace);
+                        completedTraces.add(trace);
+                    }
+                    if(exportEnabled && exporter!=null){exporter.export(batch);}
                 }
             }
         }catch(InterruptedException e){
@@ -57,18 +63,18 @@ final class TraceBatcher{
         }
     }
 
+    List<Trace> getCompletedTraces(){
+        return completedTraces;
+    }
+
+    SpanMetricsCollector getMetrics(){
+        return metrics;
+    }
+
     void shutdown(){
         running=false;
         worker.interrupt();
         try{worker.join(2000);}
         catch(InterruptedException ignored){Thread.currentThread().interrupt();}
-
-        System.out.println("\nSPAN METRICS");
-        metrics.getMetrics().forEach((name, m)->{
-            System.out.printf(
-                "%s calls=%d errors=%d avg=%.2fms p95=%.2fms p99=%.2fms%n",
-                name,m.count(),m.errors(),m.avgMs(),m.percentile(0.95),m.percentile(0.99)
-            );
-        });
     }
 }

@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Supplier;
 
+import io.opentrace.core.metrics.SpanMetricsCollector;
 import io.opentrace.core.sampling.Sampler;
 
 public final class OpenTrace{
@@ -249,6 +250,14 @@ public final class OpenTrace{
         TraceState state=current.get();
         if(state==null){return java.util.Collections.emptyMap();}
         return java.util.Collections.unmodifiableMap(state.baggage);
+    }
+
+    public TraceCollection getTraces(){
+        return new TraceCollection(batcher.getCompletedTraces());
+    }
+
+    public SpanMetricsCollector getMetrics(){
+        return batcher.getMetrics();
     }
 
     public void shutdown(){

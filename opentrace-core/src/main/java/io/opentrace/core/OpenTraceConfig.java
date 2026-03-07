@@ -9,16 +9,12 @@ final class OpenTraceConfig{
     final SpanExporter exporter;
     final Sampler sampler;
     Resource resource;
+    boolean exportEnabled=true;
 
     OpenTraceConfig(int batchSize, int queueCapacity, SpanExporter exporter, Sampler sampler){
         this.batchSize=batchSize;
         this.queueCapacity=queueCapacity;
         this.exporter=exporter;
         this.sampler=sampler;
-        // this.resource=new Resource(java.util.Map.of(
-        //     "service.name", serviceName,
-        //     "service.environment", environment,
-        //     "service.version", serviceVersion
-        // ));
     }
 }
