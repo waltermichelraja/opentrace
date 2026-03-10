@@ -2,12 +2,16 @@ package io.opentrace.core;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Supplier;
 
 import io.opentrace.core.metrics.SpanMetricsCollector;
 import io.opentrace.core.sampling.Sampler;
+import io.opentrace.core.processor.BatchSpanProcessor;
+import io.opentrace.core.processor.SpanProcessor;
 
 public final class OpenTrace{
     private final IdGenerator idGenerator=new IdGenerator();
@@ -16,11 +20,21 @@ public final class OpenTrace{
     private final TraceBatcher batcher;
     private final Sampler sampler;
     private final Resource resource;
+    private final List<SpanProcessor> processors=new ArrayList<>();
 
     OpenTrace(OpenTraceConfig config){
         this.batcher=new TraceBatcher(config);
         this.sampler=config.sampler;
         this.resource=config.resource;
+        if(config.exporter!=null && config.exportEnabled){
+            processors.add(
+                new BatchSpanProcessor(
+                    config.batchSize,
+                    config.queueCapacity,
+                    config.exporter
+                )
+            );
+        }
     }
 
     public static OpenTraceBuilder builder(){
@@ -63,7 +77,8 @@ public final class OpenTrace{
         if(state==null){return;}
         while(!state.stack.isEmpty()){endSpan();}
         Trace trace=new Trace(state.traceId, new java.util.ArrayList<>(state.spans), nameRegistry, resource);
-        batcher.submit(trace);
+        for(SpanProcessor p: processors){if(p!=null){p.onEnd(trace);}}
+        batcher.record(trace);
         current.remove();
     }
 
@@ -260,7 +275,12 @@ public final class OpenTrace{
         return batcher.getMetrics();
     }
 
+    public void addProcessor(SpanProcessor processor){
+        if(processor!=null){processors.add(processor);}
+    }
+
     public void shutdown(){
+        for(SpanProcessor processor: processors){processor.shutdown();}
         batcher.shutdown();
     }
 }

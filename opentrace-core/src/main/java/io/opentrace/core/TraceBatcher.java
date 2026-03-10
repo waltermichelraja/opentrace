@@ -30,6 +30,11 @@ final class TraceBatcher{
     void submit(Trace trace){
         queue.offer(trace);
     }
+    
+    void record(Trace trace){
+        metrics.record(trace);
+        completedTraces.add(trace);
+    }
 
     private void runWorker(){
         try{
