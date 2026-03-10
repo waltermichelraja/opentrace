@@ -59,7 +59,11 @@ final class TraceBatcher{
         List<Trace> remaining=new ArrayList<>();
         queue.drainTo(remaining);
         if(!remaining.isEmpty()){
-            exporter.export(remaining);
+            for(Trace trace:remaining){
+                metrics.record(trace);
+                completedTraces.add(trace);
+            }
+            if(exportEnabled && exporter!=null){exporter.export(remaining);}
         }
     }
 
