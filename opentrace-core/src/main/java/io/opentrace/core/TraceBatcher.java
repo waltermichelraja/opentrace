@@ -30,6 +30,11 @@ final class TraceBatcher{
     void submit(Trace trace){
         queue.offer(trace);
     }
+    
+    void record(Trace trace){
+        metrics.record(trace);
+        completedTraces.add(trace);
+    }
 
     private void runWorker(){
         try{
@@ -59,7 +64,11 @@ final class TraceBatcher{
         List<Trace> remaining=new ArrayList<>();
         queue.drainTo(remaining);
         if(!remaining.isEmpty()){
-            exporter.export(remaining);
+            for(Trace trace:remaining){
+                metrics.record(trace);
+                completedTraces.add(trace);
+            }
+            if(exportEnabled && exporter!=null){exporter.export(remaining);}
         }
     }
 

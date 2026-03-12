@@ -47,6 +47,7 @@ public final class OpenTraceBuilder{
     }
 
     public OpenTraceBuilder exporter(SpanExporter exporter){
+        if(!exportEnabled){throw new IllegalStateException("exporter disabled, call enableExporter() before setting exporter.");}
         this.exporter=exporter;
         return this;
     }
@@ -76,6 +77,7 @@ public final class OpenTraceBuilder{
 
     public OpenTraceBuilder disableExporter(){
         this.exportEnabled=false;
+        this.exporter=null;
         return this;
     }
 
