@@ -1,27 +1,34 @@
 package demo;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.util.concurrent.CompletableFuture;
 
 import io.opentrace.core.OpenTrace;
 import io.opentrace.core.instrumentation.TracingProxy;
+import io.opentrace.core.instrumentation.jdbc.TraceJdbc;
+import io.opentrace.core.processor.LoggingSpanProcessor;
 import io.opentrace.core.SpanScope;
 // import io.opentrace.core.sampling.AlwaysOnSampler;
 // import io.opentrace.core.sampling.AlwaysOffSampler;
+import io.opentrace.core.exporter.OtlpExporter;
 
 public class Demo{
-
     public static void main(String[] args){
-
         OpenTrace tracer=OpenTrace.builder()
             .samplingRate(1.0)
             .serviceName("testing")
             .environment("vsc-terminal")
             .serviceVersion("v0.3.0")
+            .exporter(new OtlpExporter("http://localhost:4318/v1/traces"))
             .disableExporter()
             .build();
 
         DemoService target=new DemoServiceImpl();
         DemoService service=TracingProxy.create(target,tracer,DemoService.class);
+
+        tracer.addProcessor(trace -> System.out.println("processor received trace "+trace.traceId));
+        tracer.addProcessor(new LoggingSpanProcessor());
 
         //    1. basic root + nested spans
         try(var root=tracer.root("order")){
