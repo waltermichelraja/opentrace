@@ -43,6 +43,14 @@ class PropagationTest{
     }
 
     @Test
+    void extractIgnoresMalformedIdsInsteadOfThrowing(){
+        var t=tracer();
+        Map<String,String> h=new HashMap<>();
+        h.put("x-opentrace-trace-id","not-a-number");
+        assertDoesNotThrow(()->assertNull(t.extract(h)));
+    }
+
+    @Test
     void serverRootContinuesTheRemoteTrace(){
         var server=tracer();
         var ctx=new OpenTraceContext(777,42,Map.of("k","v"));

@@ -176,9 +176,13 @@ public final class OpenTrace{
             else if(key.startsWith("ot-baggage-")){baggage.put(key.substring(11), e.getValue());}
         }
         if(traceId==null){return null;}
-        long tid=Long.parseLong(traceId);
-        long pid=parentId==null?0:Long.parseLong(parentId);
-        return new OpenTraceContext(tid,pid,baggage);
+        try{
+            long tid=Long.parseLong(traceId.trim());
+            long pid=parentId==null?0:Long.parseLong(parentId.trim());
+            return new OpenTraceContext(tid,pid,baggage);
+        }catch(NumberFormatException e){
+            return null;
+        }
     }
 
 
