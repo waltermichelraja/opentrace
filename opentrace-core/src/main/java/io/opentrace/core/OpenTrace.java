@@ -267,6 +267,10 @@ public final class OpenTrace{
         return java.util.Collections.unmodifiableMap(state.baggage);
     }
 
+    public List<Trace> getTraceList(){
+        return java.util.Collections.unmodifiableList(batcher.getCompletedTraces());
+    }
+
     public TraceCollection getTraces(){
         return new TraceCollection(batcher.getCompletedTraces());
     }
