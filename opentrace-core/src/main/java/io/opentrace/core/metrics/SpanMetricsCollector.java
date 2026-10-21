@@ -13,7 +13,7 @@ public final class SpanMetricsCollector{
         for(Span span: trace.spans){
             String name=trace.resolveName(span.getNameId());
             SpanMetrics m=metrics.computeIfAbsent(name, k->new SpanMetrics());
-            boolean error=span.getStatus().name().equals("ERROR");
+            boolean error=span.getStatus()==io.opentrace.core.SpanStatus.ERROR;
             m.record(span.getDuration(), error);
         }
     }

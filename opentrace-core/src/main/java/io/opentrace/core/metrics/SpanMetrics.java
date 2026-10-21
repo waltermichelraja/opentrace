@@ -32,7 +32,8 @@ public final class SpanMetrics{
         if(durations.isEmpty()){return 0;}
         List<Long> copy=new ArrayList<>(durations);
         Collections.sort(copy);
-        int index=(int)(p*copy.size());
+        int index=(int)Math.ceil(p*copy.size())-1;
+        if(index<0){index=0;}
         if(index>=copy.size()){index=copy.size()-1;}
         return copy.get(index)/1_000_000.0;
     }
