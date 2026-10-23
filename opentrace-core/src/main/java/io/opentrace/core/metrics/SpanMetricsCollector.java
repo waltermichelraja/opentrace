@@ -33,7 +33,7 @@ public final class SpanMetricsCollector{
             String name=entry.getKey();
             SpanMetrics m=entry.getValue();
             sb.append("{");
-            sb.append("\"name\":\"").append(name).append("\",");
+            sb.append("\"name\":").append(io.opentrace.core.Json.quote(name)).append(",");
             sb.append("\"calls\":").append(m.count()).append(",");
             sb.append("\"errors\":").append(m.errors()).append(",");
             sb.append("\"avgMs\":").append(String.format("%.2f",m.avgMs())).append(",");
