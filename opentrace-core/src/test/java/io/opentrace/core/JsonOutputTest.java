@@ -73,6 +73,35 @@ class JsonOutputTest{
         assertTrue(isBalanced(tracer.getTraces().toString()));
     }
 
+    @Test
+    void continuedRemoteTraceStillHasARoot(){
+        var server=tracer();
+        try(var root=server.root("HTTP GET /x",new OpenTraceContext(777,42,java.util.Map.of()))){
+            try(var s=server.span("http.request")){}
+        }
+        Trace t=only(server);
+        assertNotNull(t.getRoot());
+        assertEquals("HTTP GET /x",t.resolveName(t.getRoot().getNameId()));
+        assertTrue(t.toJson().contains("\"name\":\"HTTP GET /x\""),t.toJson());
+        assertTrue(t.toJson().contains("http.request"),t.toJson());
+    }
+
+    @Test
+    void loggingProcessorPrintsContinuedRemoteTraces(){
+        var server=tracer();
+        var buf=new ByteArrayOutputStream();
+        PrintStream old=System.out;
+        System.setOut(new PrintStream(buf));
+        try{
+            server.addProcessor(new io.opentrace.core.processor.LoggingSpanProcessor());
+            try(var root=server.root("HTTP GET /x",new OpenTraceContext(5,9,java.util.Map.of()))){
+                try(var s=server.span("child")){}
+            }
+        }finally{System.setOut(old);}
+        assertTrue(buf.toString().contains("TRACE HTTP GET /x"),buf.toString());
+        assertTrue(buf.toString().contains("child"),buf.toString());
+    }
+
     private static boolean isBalanced(String s){
         int brace=0,bracket=0;boolean inStr=false;
         for(int i=0;i<s.length();i++){

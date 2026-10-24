@@ -9,19 +9,12 @@ public final class LoggingSpanProcessor implements SpanProcessor{
 
     @Override
     public void onEnd(Trace trace){
-        Span root=findRoot(trace);
+        Span root=trace.getRoot();
         if(root==null){return;}
         String rootName=trace.resolveName(root.getNameId());
         System.out.println("TRACE "+rootName);
         Map<Long,List<Span>> children=buildChildren(trace);
         printChildren(root, children, trace, " ");
-    }
-
-    private Span findRoot(Trace trace){
-        for(Span span: trace.spans){
-            if(span.getParentSpanId()==0){return span;}
-        }
-        return null;
     }
 
     private Map<Long,List<Span>> buildChildren(Trace trace){

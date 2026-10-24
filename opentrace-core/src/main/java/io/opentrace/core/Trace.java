@@ -2,6 +2,8 @@ package io.opentrace.core;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
 public final class Trace{
     public final long traceId;
@@ -20,11 +22,15 @@ public final class Trace{
         return nameRegistry.name(nameId);
     }
 
-    private Span findRoot(){
+    public Span getRoot(){
+        Set<Long> ids=new HashSet<>();
+        for(Span s: spans){ids.add(s.getSpanId());}
+        Span orphan=null;
         for(Span s: spans){
             if(s.getParentSpanId()==0){return s;}
+            if(orphan==null && !ids.contains(s.getParentSpanId())){orphan=s;}
         }
-        return null;
+        return orphan;
     }
 
     public String toJson(){
@@ -37,7 +43,7 @@ public final class Trace{
             sb.append(Json.quote(e.getKey())).append(":").append(Json.quote(e.getValue()));
         }
         sb.append("},");
-        Span root=findRoot();
+        Span root=getRoot();
         if(root!=null){
             sb.append("\"root\":");
             appendSpanJson(sb,root);
