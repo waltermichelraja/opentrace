@@ -17,13 +17,12 @@ public final class OpenTrace{
     private final IdGenerator idGenerator=new IdGenerator();
     private final NameRegistry nameRegistry=new NameRegistry();
     private final ThreadLocal<TraceState> current=new ThreadLocal<>();
-    private final TraceBatcher batcher;
+    private final TraceStore store=new TraceStore();
     private final Sampler sampler;
     private final Resource resource;
-    private final List<SpanProcessor> processors=new ArrayList<>();
+    private final List<SpanProcessor> processors=new java.util.concurrent.CopyOnWriteArrayList<>();
 
     OpenTrace(OpenTraceConfig config){
-        this.batcher=new TraceBatcher(config);
         this.sampler=config.sampler;
         this.resource=config.resource;
         if(config.exporter!=null && config.exportEnabled){
@@ -78,7 +77,7 @@ public final class OpenTrace{
         while(!state.stack.isEmpty()){endSpan();}
         Trace trace=new Trace(state.traceId, new java.util.ArrayList<>(state.spans), nameRegistry, resource);
         for(SpanProcessor p: processors){if(p!=null){p.onEnd(trace);}}
-        batcher.record(trace);
+        store.record(trace);
         current.remove();
     }
 
@@ -272,15 +271,15 @@ public final class OpenTrace{
     }
 
     public List<Trace> getTraceList(){
-        return java.util.Collections.unmodifiableList(batcher.getCompletedTraces());
+        return java.util.Collections.unmodifiableList(store.getCompletedTraces());
     }
 
     public TraceCollection getTraces(){
-        return new TraceCollection(batcher.getCompletedTraces());
+        return new TraceCollection(store.getCompletedTraces());
     }
 
     public SpanMetricsCollector getMetrics(){
-        return batcher.getMetrics();
+        return store.getMetrics();
     }
 
     public void addProcessor(SpanProcessor processor){
@@ -289,6 +288,5 @@ public final class OpenTrace{
 
     public void shutdown(){
         for(SpanProcessor processor: processors){processor.shutdown();}
-        batcher.shutdown();
     }
 }
