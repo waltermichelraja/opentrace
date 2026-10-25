@@ -88,9 +88,11 @@ public class Demo{
         //    7. error handling
         try(var root=tracer.root("test-error")){
             try(var span=tracer.span("dangerous-operation")){
-                throw new RuntimeException("simulated failure");
-            }catch(Exception e){
-                // span automatically marked error in trace()
+                try{
+                    throw new RuntimeException("simulated failure");
+                }catch(Exception e){
+                    span.error(e);
+                }
             }
         }
 
