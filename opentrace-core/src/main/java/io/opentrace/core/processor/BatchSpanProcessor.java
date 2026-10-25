@@ -5,10 +5,11 @@ import io.opentrace.core.exporter.SpanExporter;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public final class BatchSpanProcessor implements SpanProcessor{
-
     private final BlockingQueue<Trace> queue;
     private final SpanExporter exporter;
     private final int batchSize;
@@ -27,7 +28,9 @@ public final class BatchSpanProcessor implements SpanProcessor{
 
     @Override
     public void onEnd(Trace trace){
-        queue.offer(trace);
+        if(!queue.offer(trace)){
+            System.err.println("opentrace: export queue full, dropping trace "+trace.traceId);
+        }
     }
 
     private void runWorker(){
@@ -36,17 +39,32 @@ public final class BatchSpanProcessor implements SpanProcessor{
                 List<Trace> batch=new ArrayList<>(batchSize);
                 queue.drainTo(batch,batchSize);
                 if(batch.isEmpty()){
-                    Trace t=queue.poll(500,TimeUnit.MILLISECONDS);
+                    Trace t=queue.poll(100,TimeUnit.MILLISECONDS);
                     if(t!=null){batch.add(t);}
                 }
-                if(!batch.isEmpty()){exporter.export(batch);}
+                export(batch);
             }
-        }catch(InterruptedException e){Thread.currentThread().interrupt();}
+        }catch(InterruptedException e){
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private void export(List<Trace> batch){
+        if(batch.isEmpty()){return;}
+        try{
+            exporter.export(batch);
+        }catch(RuntimeException e){
+            System.err.println("opentrace: exporter failed: "+e);
+        }
     }
 
     @Override
     public void shutdown(){
         running=false;
-        worker.interrupt();
+        try{worker.join(5000);}
+        catch(InterruptedException e){Thread.currentThread().interrupt();}
+        List<Trace> rest=new ArrayList<>();
+        queue.drainTo(rest);
+        export(rest);
     }
 }
