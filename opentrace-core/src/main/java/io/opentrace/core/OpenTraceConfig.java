@@ -10,6 +10,7 @@ final class OpenTraceConfig{
     final Sampler sampler;
     Resource resource;
     boolean exportEnabled=true;
+    int maxStoredTraces;
 
     OpenTraceConfig(int batchSize, int queueCapacity, SpanExporter exporter, Sampler sampler){
         this.batchSize=batchSize;

@@ -17,12 +17,13 @@ public final class OpenTrace{
     private final IdGenerator idGenerator=new IdGenerator();
     private final NameRegistry nameRegistry=new NameRegistry();
     private final ThreadLocal<TraceState> current=new ThreadLocal<>();
-    private final TraceStore store=new TraceStore();
+    private final TraceStore store;
     private final Sampler sampler;
     private final Resource resource;
     private final List<SpanProcessor> processors=new java.util.concurrent.CopyOnWriteArrayList<>();
 
     OpenTrace(OpenTraceConfig config){
+        this.store=new TraceStore(config.maxStoredTraces);
         this.sampler=config.sampler;
         this.resource=config.resource;
         if(config.exporter!=null && config.exportEnabled){

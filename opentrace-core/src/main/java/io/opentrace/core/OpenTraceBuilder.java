@@ -20,6 +20,7 @@ public final class OpenTraceBuilder{
 
     private Sampler sampler=new AlwaysOnSampler();
     private boolean exportEnabled=true;
+    private int maxStoredTraces=1000;
 
     public OpenTraceBuilder serviceName(String name){
         this.serviceName=name;
@@ -61,6 +62,7 @@ public final class OpenTraceBuilder{
         Resource resource=new Resource(attrs);
         config.resource=resource;
         config.exportEnabled=this.exportEnabled;
+        config.maxStoredTraces=this.maxStoredTraces;
         return new OpenTrace(config);
     }
 
@@ -72,6 +74,12 @@ public final class OpenTraceBuilder{
     public OpenTraceBuilder sampler(Sampler sampler){
         if(sampler==null){throw new IllegalArgumentException("sampler cannot be null");}
         this.sampler=sampler;
+        return this;
+    }
+
+    public OpenTraceBuilder maxStoredTraces(int max){
+        if(max<0){throw new IllegalArgumentException("maxStoredTraces cannot be negative");}
+        this.maxStoredTraces=max;
         return this;
     }
 

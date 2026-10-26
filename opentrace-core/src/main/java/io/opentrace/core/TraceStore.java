@@ -2,20 +2,32 @@ package io.opentrace.core;
 
 import io.opentrace.core.metrics.SpanMetricsCollector;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 final class TraceStore{
-    private final List<Trace> completedTraces=new CopyOnWriteArrayList<>();
+    private final ArrayDeque<Trace> completedTraces=new ArrayDeque<>();
+    private final int maxTraces;
     private final SpanMetricsCollector metrics=new SpanMetricsCollector();
+
+    TraceStore(int maxTraces){
+        this.maxTraces=maxTraces;
+    }
 
     void record(Trace trace){
         metrics.record(trace);
-        completedTraces.add(trace);
+        if(maxTraces==0){return;}
+        synchronized(completedTraces){
+            if(completedTraces.size()>=maxTraces){completedTraces.removeFirst();}
+            completedTraces.addLast(trace);
+        }
     }
 
     List<Trace> getCompletedTraces(){
-        return completedTraces;
+        synchronized(completedTraces){
+            return new ArrayList<>(completedTraces);
+        }
     }
 
     SpanMetricsCollector getMetrics(){
