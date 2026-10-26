@@ -10,6 +10,7 @@ public final class TracingProxy{
     @SuppressWarnings("unchecked")
     public static <T>T create(T target, OpenTrace tracer, Class<T> interfaceType){
         InvocationHandler handler=(proxy,method, args)->{
+            try{method.setAccessible(true);}catch(RuntimeException ignored){}
             if(method.getDeclaringClass()==Object.class){return method.invoke(target, args);}
             Trace methodTrace=method.getAnnotation(Trace.class);
             if(methodTrace==null){

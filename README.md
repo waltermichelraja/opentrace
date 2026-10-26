@@ -4,7 +4,7 @@
 It captures nested operations, async execution, and context propagation to produce traces that can be inspected and analyzed. The goal of OpenTrace is to provide a **minimal tracing engine** with a simple API and zero external dependencies.
 
 
-## Features
+## features
 * **span-based tracing**
   * record nested execution spans
   * automatic duration measurement
@@ -34,24 +34,30 @@ It captures nested operations, async execution, and context propagation to produ
   * extensible exporter interface
 
 
-## Example
-```java
-OpenTrace tracer = OpenTrace.builder()
-    .serviceName("order-service")
-    .environment("dev")
-    .serviceVersion("1.0")
-    .build();
-
-try(var root = tracer.root("order")){
-    try(var span = tracer.span("validate")){
-        span.setAttribute("userId",42);
-    }
-
-    try(var span = tracer.span("process")){
-        // business logic
-    }
-}
+## build/test
+```bash
+mvn clean install
+mvn -pl opentrace-core test
 ```
+
+
+## recording errors
+try-with-resources cannot see an exception thrown inside the block, so record it explicitly,
+or use `tracer.trace(...)`, which captures and rethrows automatically:
+```java
+try(var span = tracer.span("charge-card")){
+    try{ gateway.charge(); }
+    catch(Exception e){ span.error(e); throw e; }
+}
+
+tracer.trace("charge-card", () -> gateway.charge());   // marks the span as ERROR on exception
+```
+
+
+## demos
+`demo-app` contains runnable examples [not part of the library]: `demo.Demo` walks through nested spans, async
+propagation, events, links, baggage, attributes and errors; `demo.HttpDemo` starts a local server on :8080
+(`curl localhost:8080/call`) to show trace propagation across an HTTP call.
 
 
 ```

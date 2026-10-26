@@ -9,9 +9,9 @@ public final class Span{
     SpanStatus status=SpanStatus.UNSET;
     String errorType;
     String errorMessage;
-    java.util.Map<String,Object> attributes;
+    private java.util.Map<String,Object> attributes;
     private final java.util.List<SpanEvent> events=java.util.Collections.synchronizedList(new java.util.ArrayList<>());
-    private final java.util.List<SpanLink> links=new java.util.ArrayList<>();
+    private final java.util.List<SpanLink> links=java.util.Collections.synchronizedList(new java.util.ArrayList<>());
 
     public long getSpanId(){
         return spanId;
@@ -37,8 +37,13 @@ public final class Span{
     public String getErrorMessage(){
         return errorMessage;
     }
-    public java.util.Map<String,Object> getAttributes(){
-        return attributes;
+    synchronized void putAttribute(String key, Object value){
+        if(attributes==null){attributes=new java.util.LinkedHashMap<>();}
+        attributes.put(key, value);
+    }
+    public synchronized java.util.Map<String,Object> getAttributes(){
+        if(attributes==null){return java.util.Collections.emptyMap();}
+        return java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(attributes));
     }
     public void addEvent(String name){
         events.add(new SpanEvent(name, System.nanoTime()));

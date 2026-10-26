@@ -1,113 +1,15 @@
 package io.opentrace.core.exporter;
 
 import io.opentrace.core.Trace;
-import io.opentrace.core.Span;
 
-import java.util.*;
+import java.util.List;
 
+/** prints each trace as a single line of JSON on stdout. */
 public final class ConsoleExporter implements SpanExporter{
     @Override
     public void export(List<Trace> traces){
         for(Trace trace:traces){
-            Map<String,Object> traceMap=buildTraceMap(trace);
-            System.out.println(toJson(traceMap));
+            System.out.println(trace.toJson());
         }
-    }
-
-    private Map<String,Object> buildTraceMap(Trace trace){
-        Map<Long,List<Span>> childrenMap=new HashMap<>();
-        for(Span span: trace.spans){
-            childrenMap.computeIfAbsent(span.getParentSpanId(), k->new ArrayList<>()).add(span);
-        }
-        Map<String,Object> result=new LinkedHashMap<>();
-        result.put("traceId", trace.traceId);
-        result.put("resource",trace.resource.getAttributes());
-        Span root=null;
-        for(Span span: trace.spans){
-            if(span.getParentSpanId()==0){
-                root=span;
-                break;
-            }
-        }
-        if(root==null && !trace.spans.isEmpty()){root=trace.spans.get(trace.spans.size()-1);}
-        if(root!=null){result.put("root", buildSpanMap(root, childrenMap, trace));}
-        return result;
-    }
-
-    private Map<String,Object> buildSpanMap(Span span, Map<Long,List<Span>> childrenMap, Trace trace){
-        Map<String,Object> spanMap=new LinkedHashMap<>();
-        spanMap.put("name", trace.resolveName(span.getNameId()));
-        spanMap.put("durationMs", span.getDuration()/1_000_000.0);
-        spanMap.put("status", span.getStatus().name());
-        if(span.getStatus()==io.opentrace.core.SpanStatus.ERROR){
-            Map<String,Object> errorMap=new LinkedHashMap<>();
-            errorMap.put("type", span.getErrorType());
-            errorMap.put("message", span.getErrorMessage());
-            spanMap.put("error", errorMap);
-        }
-        Map<String,Object> attributes=span.getAttributes();
-        if(attributes!=null && !attributes.isEmpty()){
-            spanMap.put("attributes", attributes);
-        }
-        if(!span.getEvents().isEmpty()){
-            java.util.List<java.util.Map<String,Object>> eventsList=new java.util.ArrayList<>();
-            for(io.opentrace.core.SpanEvent event:span.getEvents()){
-                java.util.Map<String,Object> e=new java.util.LinkedHashMap<>();
-                e.put("name", event.getName());
-                e.put("timestampNs", event.getTimestamp());
-                eventsList.add(e);
-            }
-            spanMap.put("events", eventsList);
-        }
-        if(!span.getLinks().isEmpty()){
-            java.util.List<java.util.Map<String,Object>> linksList=new java.util.ArrayList<>();
-            for(io.opentrace.core.SpanLink link:span.getLinks()){
-                java.util.Map<String,Object> l=new java.util.LinkedHashMap<>();
-                l.put("traceId", link.getTraceId());
-                l.put("spanId", link.getSpanId());
-                linksList.add(l);
-            }
-            spanMap.put("links", linksList);
-        }
-        List<Map<String,Object>> childrenList=new ArrayList<>();
-        List<Span> children=childrenMap.get(span.getSpanId());
-        if(children!=null){
-            for(Span child:children){
-                childrenList.add(buildSpanMap(child, childrenMap, trace));
-            }
-        }
-        spanMap.put("children", childrenList);
-        return spanMap;
-    }
-
-    private String toJson(Object obj){
-        if(obj instanceof Map){
-            StringBuilder sb=new StringBuilder();
-            sb.append("{");
-            boolean first=true;
-            for(Object entryObj:((Map<?,?>)obj).entrySet()){
-                Map.Entry<?,?> entry=(Map.Entry<?,?>)entryObj;
-                if(!first){sb.append(",");}
-                first=false;
-                sb.append("\"").append(entry.getKey()).append("\":");
-                sb.append(toJson(entry.getValue()));
-            }
-            sb.append("}");
-            return sb.toString();
-        }
-        if(obj instanceof List){
-            StringBuilder sb=new StringBuilder();
-            sb.append("[");
-            boolean first=true;
-            for(Object item:(List<?>)obj){
-                if(!first){sb.append(",");}
-                first=false;
-                sb.append(toJson(item));
-            }
-            sb.append("]");
-            return sb.toString();
-        }
-        if(obj instanceof String){return "\"" + obj + "\"";}
-        return String.valueOf(obj);
     }
 }

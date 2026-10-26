@@ -1,5 +1,5 @@
 # tests: demo-app
 /demo-app/target
 
-# build: opentarce-core
+# build: opentrace-core
 /opentrace-core/target
