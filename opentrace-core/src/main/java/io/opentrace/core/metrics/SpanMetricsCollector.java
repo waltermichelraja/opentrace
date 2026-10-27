@@ -7,12 +7,33 @@ import io.opentrace.core.Span;
 import io.opentrace.core.Trace;
 
 public final class SpanMetricsCollector{
+    public static final int DEFAULT_MAX_NAMES=500;
+    public static final String OVERFLOW_NAME="_other";
+
     private final Map<String,SpanMetrics> metrics=new ConcurrentHashMap<>();
+    private final int maxNames;
+    private final int window;
+
+    public SpanMetricsCollector(){
+        this(DEFAULT_MAX_NAMES, SpanMetrics.DEFAULT_WINDOW);
+    }
+
+    public SpanMetricsCollector(int maxNames, int window){
+        if(maxNames<=0){throw new IllegalArgumentException("maxNames must be positive");}
+        if(window<=0){throw new IllegalArgumentException("window must be positive");}
+        this.maxNames=maxNames;
+        this.window=window;
+    }
 
     public void record(Trace trace){
         for(Span span: trace.spans){
             String name=trace.resolveName(span.getNameId());
-            SpanMetrics m=metrics.computeIfAbsent(name, k->new SpanMetrics());
+            SpanMetrics m=metrics.get(name);
+            if(m==null){
+                // soft cap: concurrent first-time names may overshoot by a few
+                if(metrics.size()>=maxNames){name=OVERFLOW_NAME;}
+                m=metrics.computeIfAbsent(name, k->new SpanMetrics(window));
+            }
             boolean error=span.getStatus()==io.opentrace.core.SpanStatus.ERROR;
             m.record(span.getDuration(), error);
         }
