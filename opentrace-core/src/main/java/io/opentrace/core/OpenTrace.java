@@ -11,6 +11,7 @@ import java.util.function.Supplier;
 import io.opentrace.core.metrics.SpanMetricsCollector;
 import io.opentrace.core.sampling.Sampler;
 import io.opentrace.core.processor.BatchSpanProcessor;
+import io.opentrace.core.processor.ExportStats;
 import io.opentrace.core.processor.SpanProcessor;
 
 public final class OpenTrace{
@@ -21,19 +22,21 @@ public final class OpenTrace{
     private final Sampler sampler;
     private final Resource resource;
     private final List<SpanProcessor> processors=new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final BatchSpanProcessor batchProcessor;
 
     OpenTrace(OpenTraceConfig config){
         this.store=new TraceStore(config.maxStoredTraces);
         this.sampler=config.sampler;
         this.resource=config.resource;
         if(config.exporter!=null && config.exportEnabled){
-            processors.add(
-                new BatchSpanProcessor(
-                    config.batchSize,
-                    config.queueCapacity,
-                    config.exporter
-                )
+            batchProcessor=new BatchSpanProcessor(
+                config.batchSize,
+                config.queueCapacity,
+                config.exporter
             );
+            processors.add(batchProcessor);
+        }else{
+            batchProcessor=null;
         }
     }
 
@@ -277,6 +280,10 @@ public final class OpenTrace{
 
     public TraceCollection getTraces(){
         return new TraceCollection(store.getCompletedTraces());
+    }
+
+    public ExportStats getExportStats(){
+        return batchProcessor==null?new ExportStats(0,0,0):batchProcessor.stats();
     }
 
     public SpanMetricsCollector getMetrics(){
