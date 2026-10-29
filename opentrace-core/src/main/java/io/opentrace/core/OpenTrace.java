@@ -208,7 +208,7 @@ public final class OpenTrace{
         };
     }
 
-    public <T>Supplier<T> wrap(Supplier<T> task){
+        public <T>Supplier<T> wrapSupplier(Supplier<T> task){
         TraceState captured=current.get();
         return ()->{
             if(captured==null){return task.get();}

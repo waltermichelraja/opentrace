@@ -76,7 +76,7 @@ class PropagationTest{
         try(var r=t.root("r")){
             t.putBaggage("user","u1");
             String[] seen=new String[1];
-            java.util.concurrent.CompletableFuture.runAsync(t.wrap((Runnable)()->{seen[0]=t.getBaggage("user");})).join();
+            java.util.concurrent.CompletableFuture.runAsync(t.wrap(()->seen[0]=t.getBaggage("user"))).join();
             assertEquals("u1",seen[0]);
         }
     }

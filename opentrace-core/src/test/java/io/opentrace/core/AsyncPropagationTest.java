@@ -28,7 +28,7 @@ class AsyncPropagationTest{
     void wrappedSupplierReturnsValueAndPropagates(){
         var tracer=tracer();
         try(var root=tracer.root("r")){
-            int v=CompletableFuture.supplyAsync(tracer.wrap(()->{
+            int v=CompletableFuture.supplyAsync(tracer.wrapSupplier(()->{
                 try(var c=tracer.span("calc")){return 7;}
             })).join();
             assertEquals(7,v);
@@ -66,7 +66,7 @@ class AsyncPropagationTest{
     void wrapWithoutActiveTraceJustRunsTheTask(){
         var tracer=tracer();
         int[] ran={0};
-        tracer.wrap((Runnable)()->{ran[0]++;}).run();
+        tracer.wrap(()->ran[0]++).run();
         assertEquals(1,ran[0]);
     }
 
