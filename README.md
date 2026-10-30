@@ -60,6 +60,18 @@ propagation, events, links, baggage, attributes and errors; `demo.HttpDemo` star
 (`curl localhost:8080/call`) to show trace propagation across an HTTP call.
 
 
+
+## overhead
+`demo.Bench` [a rough harness] measures what one span costs: no tracing, sampled out, sampled in without and with the trace store.
+
+```bash
+mvn clean install
+java -cp opentrace-core/target/classes:demo-app/target/classes demo.Bench 1   # 1 thread
+java -cp opentrace-core/target/classes:demo-app/target/classes demo.Bench 4   # 4 threads, shows contention
+```
+note: running it through `mvn exec:java` adds noise from maven's own JVM.
+
+
 ```
 STATUS/NOTE: OpenTrace is currently an experimental tracing library intended for learning, experimentation, and lightweight observability.
 ```
