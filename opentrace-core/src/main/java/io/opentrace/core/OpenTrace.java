@@ -16,7 +16,7 @@ import io.opentrace.core.processor.SpanProcessor;
 
 public final class OpenTrace{
     private final IdGenerator idGenerator=new IdGenerator();
-    private final NameRegistry nameRegistry=new NameRegistry();
+    private final NameRegistry nameRegistry;
     private final ThreadLocal<TraceState> current=new ThreadLocal<>();
     private final TraceStore store;
     private final Sampler sampler;
@@ -26,6 +26,7 @@ public final class OpenTrace{
 
     OpenTrace(OpenTraceConfig config){
         this.store=new TraceStore(config.maxStoredTraces);
+        this.nameRegistry=new NameRegistry(config.maxSpanNames);
         this.sampler=config.sampler;
         this.resource=config.resource;
         if(config.exporter!=null && config.exportEnabled){
