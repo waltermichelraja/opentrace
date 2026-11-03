@@ -8,11 +8,16 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 public final class BatchSpanProcessor implements SpanProcessor{
     private final BlockingQueue<Trace> queue;
     private final SpanExporter exporter;
     private final int batchSize;
+
+    private final AtomicLong exported=new AtomicLong();
+    private final AtomicLong dropped=new AtomicLong();
+    private final AtomicLong failed=new AtomicLong();
 
     private volatile boolean running=true;
     private final Thread worker;
@@ -29,8 +34,15 @@ public final class BatchSpanProcessor implements SpanProcessor{
     @Override
     public void onEnd(Trace trace){
         if(!queue.offer(trace)){
-            System.err.println("opentrace: export queue full, dropping trace "+trace.traceId);
+            long n=dropped.incrementAndGet();
+            if(n==1 || n%1000==0){
+                System.err.println("opentrace: export queue full, "+n+" trace(s) dropped so far");
+            }
         }
+    }
+
+    public ExportStats stats(){
+        return new ExportStats(exported.get(), dropped.get(), failed.get());
     }
 
     private void runWorker(){
@@ -53,7 +65,9 @@ public final class BatchSpanProcessor implements SpanProcessor{
         if(batch.isEmpty()){return;}
         try{
             exporter.export(batch);
+            exported.addAndGet(batch.size());
         }catch(RuntimeException e){
+            failed.addAndGet(batch.size());
             System.err.println("opentrace: exporter failed: "+e);
         }
     }

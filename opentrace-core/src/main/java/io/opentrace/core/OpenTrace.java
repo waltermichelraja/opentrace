@@ -11,28 +11,33 @@ import java.util.function.Supplier;
 import io.opentrace.core.metrics.SpanMetricsCollector;
 import io.opentrace.core.sampling.Sampler;
 import io.opentrace.core.processor.BatchSpanProcessor;
+import io.opentrace.core.processor.ExportStats;
 import io.opentrace.core.processor.SpanProcessor;
 
 public final class OpenTrace{
     private final IdGenerator idGenerator=new IdGenerator();
-    private final NameRegistry nameRegistry=new NameRegistry();
+    private final NameRegistry nameRegistry;
     private final ThreadLocal<TraceState> current=new ThreadLocal<>();
-    private final TraceStore store=new TraceStore();
+    private final TraceStore store;
     private final Sampler sampler;
     private final Resource resource;
     private final List<SpanProcessor> processors=new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final BatchSpanProcessor batchProcessor;
 
     OpenTrace(OpenTraceConfig config){
+        this.store=new TraceStore(config.maxStoredTraces);
+        this.nameRegistry=new NameRegistry(config.maxSpanNames);
         this.sampler=config.sampler;
         this.resource=config.resource;
         if(config.exporter!=null && config.exportEnabled){
-            processors.add(
-                new BatchSpanProcessor(
-                    config.batchSize,
-                    config.queueCapacity,
-                    config.exporter
-                )
+            batchProcessor=new BatchSpanProcessor(
+                config.batchSize,
+                config.queueCapacity,
+                config.exporter
             );
+            processors.add(batchProcessor);
+        }else{
+            batchProcessor=null;
         }
     }
 
@@ -204,7 +209,7 @@ public final class OpenTrace{
         };
     }
 
-    public <T>Supplier<T> wrap(Supplier<T> task){
+        public <T>Supplier<T> wrapSupplier(Supplier<T> task){
         TraceState captured=current.get();
         return ()->{
             if(captured==null){return task.get();}
@@ -276,6 +281,10 @@ public final class OpenTrace{
 
     public TraceCollection getTraces(){
         return new TraceCollection(store.getCompletedTraces());
+    }
+
+    public ExportStats getExportStats(){
+        return batchProcessor==null?new ExportStats(0,0,0):batchProcessor.stats();
     }
 
     public SpanMetricsCollector getMetrics(){
