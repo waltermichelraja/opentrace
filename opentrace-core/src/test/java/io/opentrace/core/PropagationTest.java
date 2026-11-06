@@ -80,4 +80,44 @@ class PropagationTest{
             assertEquals("u1",seen[0]);
         }
     }
+
+    @Test
+    void injectWritesTheTraceIdAsThirtyTwoHexDigits(){
+        var a=tracer();
+        try(var root=a.root("client")){
+            var ctx=a.currentContext();
+            String header=a.inject(ctx).get("x-opentrace-trace-id");
+            assertEquals(ctx.getTraceId().toHex(),header);
+            assertEquals(32,header.length());
+        }
+    }
+
+    @Test
+    void extractAcceptsHexAndLegacyDecimalTraceIds(){
+        var t=tracer();
+        Map<String,String> hex=new HashMap<>();
+        hex.put("x-opentrace-trace-id","4bf92f3577b34da6a3ce929d0e0e4736");
+        hex.put("x-opentrace-parent-id","9");
+        assertEquals("4bf92f3577b34da6a3ce929d0e0e4736",t.extract(hex).getTraceId().toHex());
+        Map<String,String> legacy=new HashMap<>();
+        legacy.put("x-opentrace-trace-id","55");
+        assertEquals(TraceId.fromLong(55),t.extract(legacy).getTraceId());
+    }
+
+    @Test
+    void extractRejectsAnAllZeroTraceId(){
+        var t=tracer();
+        Map<String,String> h=new HashMap<>();
+        h.put("x-opentrace-trace-id","0");
+        assertNull(t.extract(h));
+        h.put("x-opentrace-trace-id","00000000000000000000000000000000");
+        assertNull(t.extract(h));
+    }
+
+    @Test
+    void aNegativeParentIdSurvivesTheRoundTrip(){
+        var t=tracer();
+        var ctx=new OpenTraceContext(TraceId.fromLong(1),-5L,Map.of());
+        assertEquals(-5L,t.extract(t.inject(ctx)).getParentSpanId());
+    }
 }
