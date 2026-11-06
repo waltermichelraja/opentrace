@@ -80,6 +80,17 @@ class JsonOutputTest{
     }
 
     @Test
+    void linkSpanIdIsWrittenAsAHexString(){
+        var tracer=tracer();
+        try(var r=tracer.root("r")){
+            try(var s=tracer.span("work")){s.addLink(TraceId.fromLong(1),255);}
+        }
+        String json=only(tracer).toJson();
+        assertTrue(json.contains("\"spanId\":\"00000000000000ff\""),json);
+        assertFalse(json.contains("\"spanId\":255"),json);
+    }
+
+    @Test
     void continuedRemoteTraceStillHasARoot(){
         var server=tracer();
         try(var root=server.root("HTTP GET /x",new OpenTraceContext(TraceId.fromLong(777),42,java.util.Map.of()))){

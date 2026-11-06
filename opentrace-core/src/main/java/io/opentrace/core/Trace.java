@@ -95,7 +95,7 @@ public final class Trace{
                 if(!first){sb.append(",");}
                 first=false;
                 sb.append("{\"traceId\":").append(Json.quote(l.getTraceId().toHex()));
-                sb.append(",\"spanId\":").append(l.getSpanId()).append("}");
+                sb.append(",\"spanId\":").append(Json.quote(SpanIds.toHex(l.getSpanId()))).append("}");
             }
             sb.append("]");
         }
