@@ -94,7 +94,7 @@ public final class Trace{
             for(SpanLink l: links){
                 if(!first){sb.append(",");}
                 first=false;
-                sb.append("{\"traceId\":").append(l.getTraceId());
+                sb.append("{\"traceId\":").append(Json.quote(l.getTraceId().toHex()));
                 sb.append(",\"spanId\":").append(l.getSpanId()).append("}");
             }
             sb.append("]");

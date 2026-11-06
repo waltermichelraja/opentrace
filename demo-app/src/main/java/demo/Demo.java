@@ -57,7 +57,7 @@ public class Demo{
         //    4. span links
         try(var root=tracer.root("test-span-links")){
             try(var span=tracer.span("consumer")){
-                span.addLink(100,108);
+                span.addLink(io.opentrace.core.TraceId.fromLong(100),108);
             }
         }
 

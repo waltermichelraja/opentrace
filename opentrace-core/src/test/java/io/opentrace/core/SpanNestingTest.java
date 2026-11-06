@@ -56,14 +56,14 @@ class SpanNestingTest{
             try(var s=tracer.span("work")){
                 s.setAttribute("userId",42).setAttribute("table","orders");
                 s.addEvent("cache-miss");
-                s.addLink(100,108);
+                s.addLink(TraceId.fromLong(100),108);
             }
         }
         Span s=find(only(tracer),"work");
         assertEquals(42,s.getAttributes().get("userId"));
         assertEquals("orders",s.getAttributes().get("table"));
         assertEquals("cache-miss",s.getEvents().get(0).getName());
-        assertEquals(100,s.getLinks().get(0).getTraceId());
+        assertEquals(TraceId.fromLong(100),s.getLinks().get(0).getTraceId());
         assertEquals(108,s.getLinks().get(0).getSpanId());
     }
 }

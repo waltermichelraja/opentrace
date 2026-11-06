@@ -51,7 +51,7 @@ public final class Span{
     public java.util.List<SpanEvent> getEvents(){
         return events;
     }
-    public void addLink(long traceId, long spanId){
+    public void addLink(TraceId traceId, long spanId){
         links.add(new SpanLink(traceId, spanId));
     }
 

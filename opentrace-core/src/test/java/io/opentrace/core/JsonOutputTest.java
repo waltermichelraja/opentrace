@@ -17,7 +17,7 @@ class JsonOutputTest{
                 s.setAttribute("sql","SELECT \"x\" FROM t\nWHERE a='b'");
                 s.error(new RuntimeException("line1\nline2 \"q\""));
                 s.addEvent("evt");
-                s.addLink(1,2);
+                s.addLink(TraceId.fromLong(1),2);
             }
         }
         return only(tracer);
