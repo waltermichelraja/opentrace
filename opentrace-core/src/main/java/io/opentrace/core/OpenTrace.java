@@ -49,7 +49,7 @@ public final class OpenTrace{
             current.remove();
             return;
         }
-        long traceId=idGenerator.next();
+        TraceId traceId=idGenerator.nextTraceId();
         TraceState state=new TraceState(traceId, new ConcurrentLinkedQueue<>(), new ConcurrentHashMap<>());
         current.set(state);
         startSpan(name);
@@ -59,7 +59,7 @@ public final class OpenTrace{
         TraceState state=current.get();
         if(state==null){return null;}
         Span span=new Span();
-        span.spanId=idGenerator.next();
+        span.spanId=idGenerator.nextSpanId();
         span.parentSpanId=state.stack.isEmpty()?0:state.stack.peek().spanId;
         span.startTime=System.nanoTime();
         span.nameId=nameRegistry.id(name);
@@ -109,7 +109,7 @@ public final class OpenTrace{
         TraceState state=new TraceState(incoming.getTraceId(), new ConcurrentLinkedQueue<>(), new ConcurrentHashMap<>(incoming.getBaggage()));
         current.set(state);
         Span span=new Span();
-        span.spanId=idGenerator.next();
+        span.spanId=idGenerator.nextSpanId();
         span.parentSpanId=incoming.getParentSpanId();
         span.startTime=System.nanoTime();
         span.nameId=nameRegistry.id(name);
@@ -157,7 +157,7 @@ public final class OpenTrace{
         java.util.Map<String,String> map=new java.util.HashMap<>();
         map.put(
             io.opentrace.core.propagation.OpenTraceHeaders.TRACE_ID,
-            String.valueOf(ctx.getTraceId()));
+            ctx.getTraceId().toHex());
         map.put(
             io.opentrace.core.propagation.OpenTraceHeaders.PARENT_ID,
             String.valueOf(ctx.getParentSpanId()));
@@ -179,13 +179,16 @@ public final class OpenTrace{
             else if(key.startsWith("ot-baggage-")){baggage.put(key.substring(11), e.getValue());}
         }
         if(traceId==null){return null;}
-        try{
-            long tid=Long.parseLong(traceId.trim());
-            long pid=parentId==null?0:Long.parseLong(parentId.trim());
-            return new OpenTraceContext(tid,pid,baggage);
-        }catch(NumberFormatException e){
-            return null;
+        TraceId tid=TraceId.tryFromHex(traceId.trim());
+        if(tid==null){
+            try{tid=TraceId.fromLong(Long.parseLong(traceId.trim()));}
+            catch(NumberFormatException e){return null;}
         }
+        if(!tid.isValid()){return null;}
+        long pid;
+        try{pid=parentId==null?0:Long.parseLong(parentId.trim());}
+        catch(NumberFormatException e){return null;}
+        return new OpenTraceContext(tid,pid,baggage);
     }
 
 

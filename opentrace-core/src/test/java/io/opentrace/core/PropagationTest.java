@@ -37,7 +37,7 @@ class PropagationTest{
         h.put("X-OpenTrace-Parent-Id","9");
         h.put("OT-Baggage-Tenant","acme");
         OpenTraceContext c=t.extract(h);
-        assertEquals(55,c.getTraceId());
+        assertEquals(TraceId.fromLong(55),c.getTraceId());
         assertEquals(9,c.getParentSpanId());
         assertEquals("acme",c.getBaggage().get("tenant"));
     }
@@ -53,13 +53,13 @@ class PropagationTest{
     @Test
     void serverRootContinuesTheRemoteTrace(){
         var server=tracer();
-        var ctx=new OpenTraceContext(777,42,Map.of("k","v"));
+        var ctx=new OpenTraceContext(TraceId.fromLong(777),42,Map.of("k","v"));
         try(var root=server.root("HTTP GET /x",ctx)){
             assertEquals("v",server.getBaggage("k"));
             try(var s=server.span("work")){}
         }
         Trace t=only(server);
-        assertEquals(777,t.traceId);
+        assertEquals(TraceId.fromLong(777),t.traceId);
         assertEquals(42,find(t,"HTTP GET /x").getParentSpanId());
     }
 

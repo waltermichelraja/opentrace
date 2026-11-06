@@ -6,12 +6,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 public final class Trace{
-    public final long traceId;
+    public final TraceId traceId;
     public final List<Span> spans;
     private final NameRegistry nameRegistry;
     public final Resource resource;
 
-    public Trace(long traceId, List<Span> spans, NameRegistry nameRegistry, Resource resource){
+    public Trace(TraceId traceId, List<Span> spans, NameRegistry nameRegistry, Resource resource){
         this.traceId=traceId;
         this.spans=spans;
         this.nameRegistry=nameRegistry;
@@ -35,7 +35,7 @@ public final class Trace{
 
     public String toJson(){
         StringBuilder sb=new StringBuilder();
-        sb.append("{\"traceId\":").append(traceId).append(",\"resource\":{");
+        sb.append("{\"traceId\":").append(Json.quote(traceId.toHex())).append(",\"resource\":{");
         boolean first=true;
         for(Map.Entry<String,String> e: resource.getAttributes().entrySet()){
             if(!first){sb.append(",");}

@@ -74,9 +74,15 @@ class JsonOutputTest{
     }
 
     @Test
+    void traceIdIsWrittenAsAHexString(){
+        Trace t=traceWithNastyStrings();
+        assertTrue(t.toJson().contains("\"traceId\":\""+t.traceId.toHex()+"\""),t.toJson());
+    }
+
+    @Test
     void continuedRemoteTraceStillHasARoot(){
         var server=tracer();
-        try(var root=server.root("HTTP GET /x",new OpenTraceContext(777,42,java.util.Map.of()))){
+        try(var root=server.root("HTTP GET /x",new OpenTraceContext(TraceId.fromLong(777),42,java.util.Map.of()))){
             try(var s=server.span("http.request")){}
         }
         Trace t=only(server);
@@ -94,7 +100,7 @@ class JsonOutputTest{
         System.setOut(new PrintStream(buf));
         try{
             server.addProcessor(new io.opentrace.core.processor.LoggingSpanProcessor());
-            try(var root=server.root("HTTP GET /x",new OpenTraceContext(5,9,java.util.Map.of()))){
+            try(var root=server.root("HTTP GET /x",new OpenTraceContext(TraceId.fromLong(5),9,java.util.Map.of()))){
                 try(var s=server.span("child")){}
             }
         }finally{System.setOut(old);}
