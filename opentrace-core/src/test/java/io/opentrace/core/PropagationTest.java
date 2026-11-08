@@ -3,9 +3,11 @@ package io.opentrace.core;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import static io.opentrace.core.TestSupport.*;
+import io.opentrace.core.propagation.Traceparent;
 import static org.junit.jupiter.api.Assertions.*;
 
 class PropagationTest{
@@ -119,5 +121,132 @@ class PropagationTest{
         var t=tracer();
         var ctx=new OpenTraceContext(TraceId.fromLong(1),-5L,Map.of());
         assertEquals(-5L,t.extract(t.inject(ctx)).getParentSpanId());
+    }
+
+    private static final String TP_TRACE="0af7651916cd43dd8448eb211c80319c";
+    private static final String TP_SPAN="b7ad6b7169203331";
+    private static final String TP="00-"+TP_TRACE+"-"+TP_SPAN+"-01";
+    private static final String LEGACY_TRACE="4bf92f3577b34da6a3ce929d0e0e4736";
+
+    @Test
+    void injectAddsAValidTraceparentHeader(){
+        var t=tracer();
+        try(var root=t.root("client")){
+            var ctx=t.currentContext();
+            Traceparent tp=Traceparent.tryParse(t.inject(ctx).get("traceparent"));
+            assertNotNull(tp);
+            assertEquals(ctx.getTraceId(),tp.traceId());
+            assertEquals(ctx.getParentSpanId(),tp.parentSpanId());
+            assertTrue(tp.isSampled());
+        }
+    }
+
+    @Test
+    void injectStillWritesTheLegacyHeaders(){
+        var t=tracer();
+        try(var root=t.root("client")){
+            var headers=t.inject(t.currentContext());
+            assertTrue(headers.containsKey("x-opentrace-trace-id"));
+            assertTrue(headers.containsKey("x-opentrace-parent-id"));
+        }
+    }
+
+    @Test
+    void injectSkipsTraceparentWhenThereIsNoParentSpan(){
+        var t=tracer();
+        var headers=t.inject(new OpenTraceContext(TraceId.fromLong(5),0L,Map.of()));
+        assertFalse(headers.containsKey("traceparent"));
+        assertTrue(headers.containsKey("x-opentrace-trace-id"));
+    }
+
+    @Test
+    void extractReadsATraceparentFromAnotherVendor(){
+        var t=tracer();
+        Map<String,String> h=new HashMap<>();
+        h.put("traceparent",TP);
+        var ctx=t.extract(h);
+        assertEquals(TP_TRACE,ctx.getTraceId().toHex());
+        assertEquals(0xb7ad6b7169203331L,ctx.getParentSpanId());
+    }
+
+    @Test
+    void extractPrefersTraceparentOverTheLegacyHeaders(){
+        var t=tracer();
+        Map<String,String> h=new HashMap<>();
+        h.put("traceparent",TP);
+        h.put("x-opentrace-trace-id",LEGACY_TRACE);
+        h.put("x-opentrace-parent-id","9");
+        var ctx=t.extract(h);
+        assertEquals(TP_TRACE,ctx.getTraceId().toHex());
+        assertEquals(0xb7ad6b7169203331L,ctx.getParentSpanId());
+    }
+
+    @Test
+    void extractFallsBackToLegacyWhenTheTraceparentIsInvalid(){
+        var t=tracer();
+        Map<String,String> h=new HashMap<>();
+        h.put("traceparent","not-a-traceparent");
+        h.put("x-opentrace-trace-id",LEGACY_TRACE);
+        h.put("x-opentrace-parent-id","9");
+        var ctx=t.extract(h);
+        assertEquals(LEGACY_TRACE,ctx.getTraceId().toHex());
+        assertEquals(9L,ctx.getParentSpanId());
+    }
+
+    @Test
+    void extractReturnsNullWhenNothingIsUsable(){
+        var t=tracer();
+        Map<String,String> h=new HashMap<>();
+        h.put("traceparent","not-a-traceparent");
+        assertNull(t.extract(h));
+        h.put("traceparent","00-00000000000000000000000000000000-"+TP_SPAN+"-01");
+        assertNull(t.extract(h));
+    }
+
+    @Test
+    void extractIsCaseInsensitiveForTraceparent(){
+        var t=tracer();
+        for(String key: new String[]{"Traceparent","TRACEPARENT","tRaCePaReNt"}){
+            Map<String,String> h=new HashMap<>();
+            h.put(key,TP);
+            assertEquals(TP_TRACE,t.extract(h).getTraceId().toHex(),key);
+        }
+    }
+
+    @Test
+    void extractKeepsBaggageNextToTraceparent(){
+        var t=tracer();
+        Map<String,String> h=new HashMap<>();
+        h.put("traceparent",TP);
+        h.put("Ot-Baggage-User","u1");
+        assertEquals("u1",t.extract(h).getBaggage().get("user"));
+    }
+
+    @Test
+    void traceparentAloneCarriesEverythingIncludingNegativeSpanIds(){
+        var t=tracer();
+        var sent=new OpenTraceContext(TraceId.fromHex(TP_TRACE),-5L,Map.of("k","v"));
+        Map<String,String> headers=new HashMap<>(t.inject(sent));
+        headers.remove("x-opentrace-trace-id");
+        headers.remove("x-opentrace-parent-id");
+        var got=t.extract(headers);
+        assertEquals(sent.getTraceId(),got.getTraceId());
+        assertEquals(-5L,got.getParentSpanId());
+        assertEquals("v",got.getBaggage().get("k"));
+    }
+
+    @Test
+    void extractWorksUnderTheTurkishLocale(){
+        var t=tracer();
+        Locale old=Locale.getDefault();
+        try{
+            Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+            Map<String,String> h=new HashMap<>();
+            h.put("X-OpenTrace-Trace-Id",LEGACY_TRACE);
+            h.put("X-OpenTrace-Parent-Id","9");
+            assertNotNull(t.extract(h));
+        }finally{
+            Locale.setDefault(old);
+        }
     }
 }

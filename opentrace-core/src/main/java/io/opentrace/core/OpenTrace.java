@@ -161,6 +161,11 @@ public final class OpenTrace{
         map.put(
             io.opentrace.core.propagation.OpenTraceHeaders.PARENT_ID,
             String.valueOf(ctx.getParentSpanId()));
+        if(ctx.getTraceId().isValid() && ctx.getParentSpanId()!=0){
+            map.put(
+                io.opentrace.core.propagation.OpenTraceHeaders.TRACEPARENT,
+                io.opentrace.core.propagation.Traceparent.of(ctx.getTraceId(),ctx.getParentSpanId(),true).toHeader());
+        }
         for(Map.Entry<String,String> e: ctx.getBaggage().entrySet()){
             map.put("ot-baggage-"+e.getKey(), e.getValue());
         }
@@ -169,15 +174,26 @@ public final class OpenTrace{
 
     public OpenTraceContext extract(Map<String,String> headers){
         if(headers==null){return null;}
+        String traceparent=null;
         String traceId=null;
         String parentId=null;
         Map<String,String> baggage=new HashMap<>();
         for(Map.Entry<String,String> e:headers.entrySet()){
-            String key=e.getKey().toLowerCase();
-            if(key.equals(io.opentrace.core.propagation.OpenTraceHeaders.TRACE_ID)){traceId=e.getValue();}
+            if(e.getKey()==null){continue;}
+            String key=e.getKey().toLowerCase(java.util.Locale.ROOT);
+            if(key.equals(io.opentrace.core.propagation.OpenTraceHeaders.TRACEPARENT)){traceparent=e.getValue();}
+            else if(key.equals(io.opentrace.core.propagation.OpenTraceHeaders.TRACE_ID)){traceId=e.getValue();}
             else if(key.equals(io.opentrace.core.propagation.OpenTraceHeaders.PARENT_ID)){parentId=e.getValue();}
             else if(key.startsWith("ot-baggage-")){baggage.put(key.substring(11), e.getValue());}
         }
+        if(traceparent!=null){
+            io.opentrace.core.propagation.Traceparent tp=io.opentrace.core.propagation.Traceparent.tryParse(traceparent.trim());
+            if(tp!=null){return new OpenTraceContext(tp.traceId(),tp.parentSpanId(),baggage);}
+        }
+        return extractLegacy(traceId,parentId,baggage);
+    }
+
+    private static OpenTraceContext extractLegacy(String traceId,String parentId,Map<String,String> baggage){
         if(traceId==null){return null;}
         TraceId tid=TraceId.tryFromHex(traceId.trim());
         if(tid==null){
