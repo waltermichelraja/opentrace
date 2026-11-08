@@ -91,6 +91,39 @@ class JsonOutputTest{
     }
 
     @Test
+    void everySpanIdIsWrittenAsHex(){
+        var tracer=tracer();
+        try(var r=tracer.root("r")){
+            try(var a=tracer.span("a")){try(var b=tracer.span("b")){}}
+        }
+        Trace t=only(tracer);
+        String json=t.toJson();
+        for(Span s: t.spans){
+            assertTrue(json.contains("\"spanId\":\""+SpanIds.toHex(s.getSpanId())+"\""),json);
+        }
+    }
+
+    @Test
+    void aRootWithoutARemoteParentHasNoParentSpanId(){
+        var tracer=tracer();
+        try(var r=tracer.root("r")){
+            try(var a=tracer.span("a")){}
+        }
+        assertFalse(only(tracer).toJson().contains("parentSpanId"));
+    }
+
+    @Test
+    void aRootContinuingARemoteTraceWritesItsRemoteParentOnlyOnTheRoot(){
+        var server=tracer();
+        try(var root=server.root("HTTP GET /x",new OpenTraceContext(TraceId.fromLong(777),42,java.util.Map.of()))){
+            try(var s=server.span("child")){}
+        }
+        String json=only(server).toJson();
+        assertTrue(json.contains("\"parentSpanId\":\"000000000000002a\""),json);
+        assertEquals(1,json.split("parentSpanId",-1).length-1,json);
+    }
+
+    @Test
     void continuedRemoteTraceStillHasARoot(){
         var server=tracer();
         try(var root=server.root("HTTP GET /x",new OpenTraceContext(TraceId.fromLong(777),42,java.util.Map.of()))){

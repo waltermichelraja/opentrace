@@ -64,6 +64,8 @@ class HttpPropagationTest{
             assertEquals(clientTrace.traceId,serverTrace.traceId);
             assertEquals(find(clientTrace,"http.client").getSpanId(),
                          find(serverTrace,"HTTP GET /ping").getParentSpanId());
+            assertTrue(serverTrace.toJson().contains("\"parentSpanId\":\""
+                +SpanIds.toHex(find(clientTrace,"http.client").getSpanId())+"\""),serverTrace.toJson());
             Traceparent onTheWire=Traceparent.tryParse(seen.get());
             assertNotNull(onTheWire,"the server saw no valid traceparent header: "+seen.get());
             assertEquals(clientTrace.traceId,onTheWire.traceId());
