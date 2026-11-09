@@ -61,7 +61,7 @@ public final class OpenTrace{
         Span span=new Span();
         span.spanId=idGenerator.nextSpanId();
         span.parentSpanId=state.stack.isEmpty()?0:state.stack.peek().spanId;
-        span.startTime=System.nanoTime();
+        span.start();
         span.nameId=nameRegistry.id(name);
         state.stack.push(span);
         return span;
@@ -71,7 +71,7 @@ public final class OpenTrace{
         TraceState state=current.get();
         if(state==null || state.stack.isEmpty()){return;}
         Span span=state.stack.pop();
-        span.duration=System.nanoTime()-span.startTime;
+        span.finish();
         state.spans.add(span);
     }
 
@@ -111,7 +111,7 @@ public final class OpenTrace{
         Span span=new Span();
         span.spanId=idGenerator.nextSpanId();
         span.parentSpanId=incoming.getParentSpanId();
-        span.startTime=System.nanoTime();
+        span.start();
         span.nameId=nameRegistry.id(name);
         state.stack.push(span);
         return new RootScope(this);
