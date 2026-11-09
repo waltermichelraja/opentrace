@@ -54,7 +54,8 @@ public final class Span{
         return java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(attributes));
     }
     public void addEvent(String name){
-        events.add(new SpanEvent(name, System.nanoTime()));
+        long timestamp=startEpochNanos+(System.nanoTime()-startTime);
+        events.add(new SpanEvent(name,timestamp));
     }
     public java.util.List<SpanEvent> getEvents(){
         return events;
