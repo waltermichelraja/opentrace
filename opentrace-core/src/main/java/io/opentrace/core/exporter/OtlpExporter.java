@@ -8,6 +8,7 @@ import io.opentrace.core.SpanLink;
 import io.opentrace.core.SpanStatus;
 import io.opentrace.core.Trace;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Array;
 import java.math.BigInteger;
@@ -26,20 +27,35 @@ public final class OtlpExporter implements SpanExporter{
 
     @Override
     public void export(List<Trace> traces){
+        HttpURLConnection conn=null;
         try{
             String payload=buildPayload(traces);
             URL url=new URL(endpoint);
-            HttpURLConnection conn=(HttpURLConnection)url.openConnection();
+            conn=(HttpURLConnection)url.openConnection();
             conn.setRequestMethod("POST");
             conn.setDoOutput(true);
             conn.setRequestProperty("Content-Type","application/json");
             try(OutputStream os=conn.getOutputStream()){
                 os.write(payload.getBytes(StandardCharsets.UTF_8));
             }
-            conn.getResponseCode();
-            conn.disconnect();
-        }catch(Exception e){
-            e.printStackTrace();
+            int responseCode=conn.getResponseCode();
+            java.io.InputStream responseStream=responseCode>=400?conn.getErrorStream():conn.getInputStream();
+            if(responseStream!=null){
+                try(java.io.InputStream response=responseStream){
+                    response.transferTo(OutputStream.nullOutputStream());
+                }
+            }
+            if(responseCode<200 || responseCode>=300){
+                throw new IllegalStateException(
+                    "OTLP export failed with HTTP status "+responseCode
+                );
+            }
+        }catch(IOException e){
+            throw new IllegalStateException("OTLP export request failed",e);
+        }finally{
+            if(conn!=null){
+                conn.disconnect();
+            }
         }
     }
 
