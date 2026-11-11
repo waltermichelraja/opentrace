@@ -6,12 +6,12 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.Map;
 
 final class TraceState{
-    final long traceId;
+    final TraceId traceId;
     final ConcurrentLinkedQueue<Span> spans;
     final Deque<Span> stack=new ArrayDeque<>();
     final Map<String,String> baggage;
 
-    TraceState(long traceId, 
+    TraceState(TraceId traceId,
                ConcurrentLinkedQueue<Span> spans, 
                Map<String,String> baggage){
         this.traceId=traceId;

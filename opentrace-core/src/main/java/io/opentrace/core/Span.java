@@ -5,6 +5,8 @@ public final class Span{
     long parentSpanId;
     long startTime;
     long duration;
+    private long startEpochNanos;
+    private long endEpochNanos;
     int nameId;
     SpanStatus status=SpanStatus.UNSET;
     String errorType;
@@ -19,6 +21,12 @@ public final class Span{
     public long getParentSpanId(){
         return parentSpanId;
     }
+    /**
+     * returns the legacy monotonic start-time reading.
+     *
+     * @deprecated Use {@link #getStartEpochNanos()} for an absolute timestamp.
+     */
+    @Deprecated
     public long getStartTime(){
         return startTime;
     }
@@ -46,16 +54,36 @@ public final class Span{
         return java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(attributes));
     }
     public void addEvent(String name){
-        events.add(new SpanEvent(name, System.nanoTime()));
+        long timestamp=startEpochNanos+(System.nanoTime()-startTime);
+        events.add(new SpanEvent(name,timestamp));
     }
     public java.util.List<SpanEvent> getEvents(){
         return events;
     }
-    public void addLink(long traceId, long spanId){
+    public void addLink(TraceId traceId, long spanId){
         links.add(new SpanLink(traceId, spanId));
     }
 
     public java.util.List<SpanLink> getLinks(){
         return links;
+    }
+
+    void start(){
+        java.time.Instant now=java.time.Instant.now();
+        startTime=System.nanoTime();
+        startEpochNanos=now.getEpochSecond()*1_000_000_000L+now.getNano();
+    }
+
+    void finish(){
+        duration=System.nanoTime()-startTime;
+        endEpochNanos=startEpochNanos+duration;
+    }
+
+    public long getStartEpochNanos(){
+        return startEpochNanos;
+    }
+
+    public long getEndEpochNanos(){
+        return endEpochNanos;
     }
 }

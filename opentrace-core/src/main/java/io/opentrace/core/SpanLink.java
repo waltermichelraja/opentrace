@@ -1,15 +1,15 @@
 package io.opentrace.core;
 
 public final class SpanLink{
-    private final long traceId;
+    private final TraceId traceId;
     private final long spanId;
 
-    public SpanLink(long traceId, long spanId){
+    public SpanLink(TraceId traceId, long spanId){
         this.traceId=traceId;
         this.spanId=spanId;
     }
 
-    public long getTraceId(){
+    public TraceId getTraceId(){
         return traceId;
     }
 

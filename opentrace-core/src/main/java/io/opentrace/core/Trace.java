@@ -6,12 +6,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 public final class Trace{
-    public final long traceId;
+    public final TraceId traceId;
     public final List<Span> spans;
     private final NameRegistry nameRegistry;
     public final Resource resource;
 
-    public Trace(long traceId, List<Span> spans, NameRegistry nameRegistry, Resource resource){
+    public Trace(TraceId traceId, List<Span> spans, NameRegistry nameRegistry, Resource resource){
         this.traceId=traceId;
         this.spans=spans;
         this.nameRegistry=nameRegistry;
@@ -35,7 +35,7 @@ public final class Trace{
 
     public String toJson(){
         StringBuilder sb=new StringBuilder();
-        sb.append("{\"traceId\":").append(traceId).append(",\"resource\":{");
+        sb.append("{\"traceId\":").append(Json.quote(traceId.toHex())).append(",\"resource\":{");
         boolean first=true;
         for(Map.Entry<String,String> e: resource.getAttributes().entrySet()){
             if(!first){sb.append(",");}
@@ -46,7 +46,7 @@ public final class Trace{
         Span root=getRoot();
         if(root!=null){
             sb.append("\"root\":");
-            appendSpanJson(sb,root);
+            appendSpanJson(sb,root,true);
         }else{
             sb.append("\"root\":null");
         }
@@ -54,8 +54,12 @@ public final class Trace{
         return sb.toString();
     }
 
-    private void appendSpanJson(StringBuilder sb, Span span){
+    private void appendSpanJson(StringBuilder sb, Span span, boolean isRoot){
         sb.append("{\"name\":").append(Json.quote(resolveName(span.getNameId())));
+        sb.append(",\"spanId\":").append(Json.quote(SpanIds.toHex(span.getSpanId())));
+        if(isRoot && span.getParentSpanId()!=0){
+            sb.append(",\"parentSpanId\":").append(Json.quote(SpanIds.toHex(span.getParentSpanId())));
+        }
         sb.append(",\"durationMs\":").append(span.getDuration()/1_000_000.0);
         sb.append(",\"status\":").append(Json.quote(span.getStatus().name()));
         if(span.getStatus()==SpanStatus.ERROR){
@@ -94,8 +98,8 @@ public final class Trace{
             for(SpanLink l: links){
                 if(!first){sb.append(",");}
                 first=false;
-                sb.append("{\"traceId\":").append(l.getTraceId());
-                sb.append(",\"spanId\":").append(l.getSpanId()).append("}");
+                sb.append("{\"traceId\":").append(Json.quote(l.getTraceId().toHex()));
+                sb.append(",\"spanId\":").append(Json.quote(SpanIds.toHex(l.getSpanId()))).append("}");
             }
             sb.append("]");
         }
@@ -105,8 +109,7 @@ public final class Trace{
             if(child!=span && child.getParentSpanId()==span.getSpanId()){
                 if(!firstChild){sb.append(",");}
                 firstChild=false;
-                appendSpanJson(sb,child);
-            }
+                appendSpanJson(sb,child,false);            }
         }
         sb.append("]}");
     }
