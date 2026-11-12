@@ -1,5 +1,6 @@
 package io.opentrace.core;
 
+import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class AsyncSpanScope implements AutoCloseable{
@@ -34,10 +35,20 @@ public final class AsyncSpanScope implements AutoCloseable{
         if(span==null||!closed.compareAndSet(false,true)){
             return;
         }
-
         span.finish();
         state.spans.add(span);
         state.pendingAsyncSpans.decrementAndGet();
         tracer.completeIfReady(state);
+    }
+
+    public OpenTraceContext context(){
+        if(span==null||closed.get()){
+            return null;
+        }
+        return new OpenTraceContext(
+            state.traceId,
+            span.spanId,
+            new HashMap<>(state.baggage)
+        );
     }
 }
