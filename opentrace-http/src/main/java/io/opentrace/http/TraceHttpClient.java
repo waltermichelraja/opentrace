@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.net.Authenticator;
 import java.net.CookieHandler;
 import java.net.ProxySelector;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -90,11 +91,25 @@ public final class TraceHttpClient extends HttpClient{
         HttpResponse.BodyHandler<T> responseBodyHandler
     )throws IOException,InterruptedException{
         try(SpanScope span=tracer.span("http.client")){
-            HttpRequest tracedRequest=injectTraceparent(
-                request,
-                tracer.currentContext()
-            );
-            return delegate.send(tracedRequest,responseBodyHandler);
+            recordRequestAttributes(span,request);
+            try{
+                HttpRequest tracedRequest=injectTraceparent(
+                    request,
+                    tracer.currentContext()
+                );
+                HttpResponse<T> response=delegate.send(
+                    tracedRequest,
+                    responseBodyHandler
+                );
+                span.setAttribute(
+                    "http.response.status_code",
+                    response.statusCode()
+                );
+                return response;
+            }catch(IOException|InterruptedException|RuntimeException|Error error){
+                span.error(error);
+                throw error;
+            }
         }
     }
 
@@ -134,6 +149,7 @@ public final class TraceHttpClient extends HttpClient{
     ){
         AsyncSpanScope span=tracer.asyncSpan("http.client");
         try{
+            recordRequestAttributes(span,request);
             HttpRequest tracedRequest=injectTraceparent(
                 request,
                 span.context()
@@ -169,6 +185,11 @@ public final class TraceHttpClient extends HttpClient{
         source.whenComplete((response,error)->{
             if(error!=null){
                 span.error(unwrap(error));
+            }else if(response!=null){
+                span.setAttribute(
+                    "http.response.status_code",
+                    response.statusCode()
+                );
             }
             span.close();
             if(error!=null){
@@ -178,6 +199,46 @@ public final class TraceHttpClient extends HttpClient{
             }
         });
         return result;
+    }
+
+    private void recordRequestAttributes(
+        SpanScope span,
+        HttpRequest request
+    ){
+        URI uri=request.uri();
+        span.setAttribute("http.request.method",request.method());
+        if(uri.getScheme()!=null){
+            span.setAttribute("url.scheme",uri.getScheme());
+        }
+        if(uri.getHost()!=null){
+            span.setAttribute("server.address",uri.getHost());
+        }
+        if(uri.getPort()>=0){
+            span.setAttribute("server.port",uri.getPort());
+        }
+        if(uri.getRawPath()!=null&&!uri.getRawPath().isEmpty()){
+            span.setAttribute("url.path",uri.getRawPath());
+        }
+    }
+
+    private void recordRequestAttributes(
+        AsyncSpanScope span,
+        HttpRequest request
+    ){
+        URI uri=request.uri();
+        span.setAttribute("http.request.method",request.method());
+        if(uri.getScheme()!=null){
+            span.setAttribute("url.scheme",uri.getScheme());
+        }
+        if(uri.getHost()!=null){
+            span.setAttribute("server.address",uri.getHost());
+        }
+        if(uri.getPort()>=0){
+            span.setAttribute("server.port",uri.getPort());
+        }
+        if(uri.getRawPath()!=null&&!uri.getRawPath().isEmpty()){
+            span.setAttribute("url.path",uri.getRawPath());
+        }
     }
 
     private Throwable unwrap(Throwable error){
