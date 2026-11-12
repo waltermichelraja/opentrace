@@ -77,17 +77,62 @@ public final class OpenTrace{
 
     public void endRoot(){
         TraceState state=current.get();
-        if(state==null){return;}
-        while(!state.stack.isEmpty()){endSpan();}
-        Trace trace=new Trace(state.traceId, new java.util.ArrayList<>(state.spans), nameRegistry, resource);
-        for(SpanProcessor p: processors){if(p!=null){p.onEnd(trace);}}
-        store.record(trace);
+        if(state==null){
+            return;
+        }
+        while(!state.stack.isEmpty()){
+            endSpan();
+        }
+        state.rootEnded=true;
         current.remove();
+        completeIfReady(state);
+    }
+
+    void completeIfReady(TraceState state){
+        if(state==null||!state.rootEnded){
+            return;
+        }
+        synchronized(state){
+            if(state.completed.get()
+                ||state.pendingAsyncSpans.get()!=0){
+                return;
+            }
+            if(!state.completed.compareAndSet(false,true)){
+                return;
+            }
+            Trace trace=new Trace(
+                state.traceId,
+                new java.util.ArrayList<>(state.spans),
+                nameRegistry,
+                resource
+            );
+            for(SpanProcessor processor:processors){
+                if(processor!=null){
+                    processor.onEnd(trace);
+                }
+            }
+            store.record(trace);
+        }
     }
 
     public SpanScope span(String name){
         Span span=startSpan(name);
         return new SpanScope(this, span);
+    }
+
+    public AsyncSpanScope asyncSpan(String name){
+        TraceState state=current.get();
+        if(state==null){
+            return new AsyncSpanScope(this,null,null);
+        }
+        Span parent=state.stack.peek();
+        Span span=new Span();
+        span.spanId=idGenerator.nextSpanId();
+        span.parentSpanId=parent==null?0:parent.spanId;
+        span.start();
+        span.nameId=nameRegistry.id(name);
+        state.pendingAsyncSpans.incrementAndGet();
+        return new AsyncSpanScope(this,state,span);
     }
 
     public RootScope root(String name){
