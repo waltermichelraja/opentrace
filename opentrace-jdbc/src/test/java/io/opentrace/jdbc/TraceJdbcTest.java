@@ -202,6 +202,120 @@ class TraceJdbcTest{
         assertEquals("SQLException",span.getErrorType());
     }
 
+    @Test
+    void statementExecutionRecordsOperationMetadata()throws Exception{
+        Statement statement=proxy(Statement.class,(method,args)->{
+            if(method.getName().equals("executeUpdate")){return 1;}
+            return defaultValue(method.getReturnType());
+        });
+
+        OpenTrace tracer=tracer();
+        DataSource traced=tracedDataSource(tracer,statement);
+
+        try(var root=tracer.root("test")){
+            traced.getConnection().createStatement().executeUpdate("UPDATE items SET active=true");
+        }
+
+        Span span=findSpan(onlyTrace(tracer),"db.query");
+
+        assertEquals("jdbc",span.getAttributes().get("db.system"));
+        assertEquals("UPDATE",span.getAttributes().get("db.operation.name"));
+        assertFalse(span.getAttributes().containsKey("db.statement"));
+    }
+
+    @Test
+    void sqlCaptureIsExplicitlyOptIn()throws Exception{
+        String sql="SELECT * FROM items WHERE id=42";
+
+        Statement statement=proxy(Statement.class,(method,args)->{
+            return defaultValue(method.getReturnType());
+        });
+
+        Connection connection=proxy(Connection.class,(method,args)->{
+            if(method.getName().equals("createStatement")){return statement;}
+            return defaultValue(method.getReturnType());
+        });
+
+        DataSource source=dataSource((method,args)->{
+            if(method.getName().equals("getConnection")){return connection;}
+            return defaultValue(method.getReturnType());
+        });
+
+        OpenTrace tracer=tracer();
+        DataSource traced=TraceJdbc.wrap(source,tracer,true);
+
+        try(var root=tracer.root("test")){
+            traced.getConnection().createStatement().execute(sql);
+        }
+
+        Span span=findSpan(onlyTrace(tracer),"db.query");
+
+        assertEquals("SELECT",span.getAttributes().get("db.operation.name"));
+        assertEquals(sql,span.getAttributes().get("db.statement"));
+    }
+
+    @Test
+    void preparedStatementDoesNotCaptureParameterValues()throws Exception{
+        String sql="SELECT * FROM users WHERE email=?";
+
+        PreparedStatement prepared=proxy(PreparedStatement.class,(method,args)->{
+            if(method.getName().equals("executeQuery")){return null;}
+            return defaultValue(method.getReturnType());
+        });
+
+        Connection connection=proxy(Connection.class,(method,args)->{
+            if(method.getName().equals("prepareStatement")){return prepared;}
+            return defaultValue(method.getReturnType());
+        });
+
+        DataSource source=dataSource((method,args)->{
+            if(method.getName().equals("getConnection")){return connection;}
+            return defaultValue(method.getReturnType());
+        });
+
+        OpenTrace tracer=tracer();
+        DataSource traced=TraceJdbc.wrap(source,tracer,true);
+
+        try(var root=tracer.root("test")){
+            PreparedStatement statement=traced.getConnection().prepareStatement(sql);
+            statement.setString(1,"private@example.com");
+            statement.executeQuery();
+        }
+
+        Span span=findSpan(onlyTrace(tracer),"db.query");
+
+        assertEquals(sql,span.getAttributes().get("db.statement"));
+        assertFalse(span.getAttributes().toString().contains("private@example.com"));
+    }
+
+    @Test
+    void sqlErrorsRecordMetadataAndPreserveOriginalException()throws Exception{
+        SQLException expected=new SQLException("Syntax error","42000",1064);
+
+        Statement statement=proxy(Statement.class,(method,args)->{
+            if(method.getName().equals("executeUpdate")){throw expected;}
+            return defaultValue(method.getReturnType());
+        });
+
+        OpenTrace tracer=tracer();
+        DataSource traced=tracedDataSource(tracer,statement);
+
+        try(var root=tracer.root("test")){
+            SQLException actual=assertThrows(SQLException.class,
+                ()->traced.getConnection().createStatement().executeUpdate("INVALID SQL")
+            );
+            assertSame(expected,actual);
+        }
+
+        Span span=findSpan(onlyTrace(tracer),"db.query");
+
+        assertEquals(SpanStatus.ERROR,span.getStatus());
+        assertEquals(SQLException.class.getName(),span.getAttributes().get("error.type"));
+        assertEquals("42000",span.getAttributes().get("db.response.sqlstate"));
+        assertEquals(1064,span.getAttributes().get("db.response.vendor_code"));
+        assertFalse(span.getAttributes().containsKey("db.statement"));
+    }
+
     private static OpenTrace tracer(){
         return OpenTrace.builder().build();
     }
