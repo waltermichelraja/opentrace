@@ -1,5 +1,6 @@
 # tests: demo-app
 /demo-app/target
 
-# build: opentrace-core
+# build: opentrace-core, opentrace-jdbc
 /opentrace-core/target
+/opentrace-jdbc/target

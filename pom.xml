@@ -11,6 +11,7 @@
 
     <modules>
         <module>opentrace-core</module>
+        <module>opentrace-jdbc</module>
         <module>demo-app</module>
     </modules>
 
