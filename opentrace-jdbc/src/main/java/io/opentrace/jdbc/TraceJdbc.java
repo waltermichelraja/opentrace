@@ -1,4 +1,3 @@
-
 package io.opentrace.jdbc;
 
 import io.opentrace.core.OpenTrace;
