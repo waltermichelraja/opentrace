@@ -138,20 +138,24 @@ public final class OpenTrace{
     public RootScope root(String name){
         if(current.get()!=null){throw new IllegalStateException("root span already active in this thread");}
         startRoot(name);
-        return new RootScope(this);
+        return new RootScope(this,currentRootSpan());
     }
 
-    public RootScope root(String name, OpenTraceContext incoming){
+    public RootScope root(String name,OpenTraceContext incoming){
         if(current.get()!=null){throw new IllegalStateException("root span already active in this thread");}
         if(incoming==null){
             startRoot(name);
-            return new RootScope(this);
+            return new RootScope(this,currentRootSpan());
         }
         if(!sampler.shouldSample()){
             current.remove();
-            return new RootScope(this);
+            return new RootScope(this,null);
         }
-        TraceState state=new TraceState(incoming.getTraceId(), new ConcurrentLinkedQueue<>(), new ConcurrentHashMap<>(incoming.getBaggage()));
+        TraceState state=new TraceState(
+            incoming.getTraceId(),
+            new ConcurrentLinkedQueue<>(),
+            new ConcurrentHashMap<>(incoming.getBaggage())
+        );
         current.set(state);
         Span span=new Span();
         span.spanId=idGenerator.nextSpanId();
@@ -159,7 +163,12 @@ public final class OpenTrace{
         span.start();
         span.nameId=nameRegistry.id(name);
         state.stack.push(span);
-        return new RootScope(this);
+        return new RootScope(this,span);
+    }
+
+    private Span currentRootSpan(){
+        TraceState state=current.get();
+        return state==null||state.stack.isEmpty()?null:state.stack.peek();
     }
 
     public OpenTraceContext currentContext(){
