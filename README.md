@@ -57,9 +57,10 @@ tracer.trace("charge-card", () -> gateway.charge());   // marks the span as ERRO
 ## demos
 `demo-app` contains runnable examples [not part of the library]:
 - `demo.Demo` demonstrates nested spans, async propagation, events, links, baggage, attributes and errors.
-- `demo.JdbcDemo` demonstrates JDBC instrumentation using an embedded H2 database.
 - `demo.HttpDemo` demonstrates synchronous and asynchronous HTTP client instrumentation using a local HTTP server.
+- `demo.JdbcDemo` demonstrates JDBC instrumentation using an embedded H2 database.
 - `demo.ServletDemo` demonstrates servlet server instrumentation using `OpenTraceFilter` and embedded Tomcat.
+- `demo.TraceAnnotationDemo` demonstrates interface-level and method-level `@Trace` annotations, custom span names, and nested proxy calls.
 
 run the HTTP demo:
 ```bash
@@ -73,10 +74,16 @@ mvn -pl demo-app -am install
 mvn -f demo-app/pom.xml exec:java -Dexec.mainClass=demo.JdbcDemo
 ```
 
-run the Servlet demo:
+run the servlet demo:
 ```bash
 mvn -pl demo-app -am install
 mvn -f demo-app/pom.xml exec:java -Dexec.mainClass=demo.ServletDemo
+```
+
+run the annotation demo:
+```bash
+mvn -pl demo-app -am install
+mvn -f demo-app/pom.xml exec:java -Dexec.mainClass=demo.TraceAnnotationDemo
 ```
 
 ## overhead
