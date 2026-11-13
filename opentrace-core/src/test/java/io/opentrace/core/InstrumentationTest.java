@@ -14,6 +14,28 @@ class InstrumentationTest{
     @Trace
     interface Traced{ void validate(); void process(); int add(int x,int y); void fail(); }
 
+    interface MethodAnnotatedService{
+        @Trace("interface.custom")
+        void execute();
+    }
+
+    static class MethodAnnotatedServiceImpl implements MethodAnnotatedService{
+        public void execute(){}
+    }
+
+    interface ClassAnnotatedService{
+        void defaultName();
+        void customName();
+    }
+
+    @Trace
+    static class ClassAnnotatedServiceImpl implements ClassAnnotatedService{
+        public void defaultName(){}
+
+        @Trace("custom.operation")
+        public void customName(){}
+    }
+
     static class Impl implements Traced, SelfAware<Traced>{
         Traced self;
         public void setSelf(Traced s){self=s;}
@@ -63,5 +85,34 @@ class InstrumentationTest{
         Traced svc=TracingProxy.create(new Impl(),tracer,Traced.class);
         assertEquals(3,svc.add(1,2));
         assertTrue(tracer.getTraceList().isEmpty());
+    }
+
+    @Test
+    void interfaceMethodAnnotationUsesCustomSpanName(){
+        var tracer=tracer();
+        MethodAnnotatedService svc=TracingProxy.create(
+            new MethodAnnotatedServiceImpl(),
+            tracer,
+            MethodAnnotatedService.class
+        );
+        try(var r=tracer.root("root")){svc.execute();}
+        assertNotNull(find(only(tracer),"interface.custom"));
+    }
+
+    @Test
+    void implementationClassAnnotationTracesPublicInterfaceMethods(){
+        var tracer=tracer();
+        ClassAnnotatedService svc=TracingProxy.create(
+            new ClassAnnotatedServiceImpl(),
+            tracer,
+            ClassAnnotatedService.class
+        );
+        try(var r=tracer.root("root")){
+            svc.defaultName();
+            svc.customName();
+        }
+        io.opentrace.core.Trace trace=only(tracer);
+        assertNotNull(find(trace,"defaultName"));
+        assertNotNull(find(trace,"custom.operation"));
     }
 }
