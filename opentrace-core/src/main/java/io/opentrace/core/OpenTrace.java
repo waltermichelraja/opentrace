@@ -76,15 +76,22 @@ public final class OpenTrace{
     }
 
     public void endRoot(){
-        TraceState state=current.get();
+        endRoot(current.get());
+    }
+
+    void endRoot(TraceState state){
         if(state==null){
             return;
         }
         while(!state.stack.isEmpty()){
-            endSpan();
+            Span span=state.stack.pop();
+            span.finish();
+            state.spans.add(span);
         }
         state.rootEnded=true;
-        current.remove();
+        if(current.get()==state){
+            current.remove();
+        }
         completeIfReady(state);
     }
 
@@ -136,20 +143,27 @@ public final class OpenTrace{
     }
 
     public RootScope root(String name){
-        if(current.get()!=null){throw new IllegalStateException("root span already active in this thread");}
+        if(current.get()!=null){
+            throw new IllegalStateException("root span already active in this thread");
+        }
         startRoot(name);
-        return new RootScope(this,currentRootSpan());
+        TraceState state=current.get();
+        Span span=currentRootSpan(state);
+        return new RootScope(this,state,span);
     }
 
     public RootScope root(String name,OpenTraceContext incoming){
-        if(current.get()!=null){throw new IllegalStateException("root span already active in this thread");}
+        if(current.get()!=null){
+            throw new IllegalStateException("root span already active in this thread");
+        }
         if(incoming==null){
             startRoot(name);
-            return new RootScope(this,currentRootSpan());
+            TraceState state=current.get();
+            return new RootScope(this,state,currentRootSpan(state));
         }
         if(!sampler.shouldSample()){
             current.remove();
-            return new RootScope(this,null);
+            return new RootScope(this,null,null);
         }
         TraceState state=new TraceState(
             incoming.getTraceId(),
@@ -163,12 +177,28 @@ public final class OpenTrace{
         span.start();
         span.nameId=nameRegistry.id(name);
         state.stack.push(span);
-        return new RootScope(this,span);
+        return new RootScope(this,state,span);
     }
 
-    private Span currentRootSpan(){
-        TraceState state=current.get();
+    private Span currentRootSpan(TraceState state){
         return state==null||state.stack.isEmpty()?null:state.stack.peek();
+    }
+
+    void makeCurrent(TraceState state){
+        if(state==null){
+            return;
+        }
+        TraceState existing=current.get();
+        if(existing!=null&&existing!=state){
+            throw new IllegalStateException("another trace is already active in this thread");
+        }
+        current.set(state);
+    }
+
+    void detach(TraceState state){
+        if(state!=null&&current.get()==state){
+            current.remove();
+        }
     }
 
     public OpenTraceContext currentContext(){
