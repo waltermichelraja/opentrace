@@ -36,6 +36,27 @@ class InstrumentationTest{
         public void customName(){}
     }
 
+    interface AnnotationPrecedenceService{
+        @Trace("interface.operation")
+        void execute();
+    }
+
+    static class AnnotationPrecedenceServiceImpl implements AnnotationPrecedenceService{
+        @Trace("implementation.operation")
+        public void execute(){}
+    }
+
+    @Trace
+    interface CheckedExceptionService{
+        void execute()throws java.io.IOException;
+    }
+
+    static class CheckedExceptionServiceImpl implements CheckedExceptionService{
+        public void execute()throws java.io.IOException{
+            throw new java.io.IOException("disk unavailable");
+        }
+    }
+
     static class Impl implements Traced, SelfAware<Traced>{
         Traced self;
         public void setSelf(Traced s){self=s;}
@@ -114,5 +135,36 @@ class InstrumentationTest{
         io.opentrace.core.Trace trace=only(tracer);
         assertNotNull(find(trace,"defaultName"));
         assertNotNull(find(trace,"custom.operation"));
+    }
+
+    @Test
+    void implementationMethodAnnotationTakesPrecedence(){
+        var tracer=tracer();
+        AnnotationPrecedenceService svc=TracingProxy.create(
+            new AnnotationPrecedenceServiceImpl(),
+            tracer,
+            AnnotationPrecedenceService.class
+        );
+        try(var r=tracer.root("root")){svc.execute();}
+        io.opentrace.core.Trace trace=only(tracer);
+        assertNotNull(find(trace,"implementation.operation"));
+    }
+
+    @Test
+    void checkedExceptionTypeIsPreservedAndSpanMarkedError(){
+        var tracer=tracer();
+        CheckedExceptionService svc=TracingProxy.create(
+            new CheckedExceptionServiceImpl(),
+            tracer,
+            CheckedExceptionService.class
+        );
+        try(var r=tracer.root("root")){
+            java.io.IOException exception=assertThrows(
+                java.io.IOException.class,
+                svc::execute
+            );
+            assertEquals("disk unavailable",exception.getMessage());
+        }
+        assertEquals(SpanStatus.ERROR,find(only(tracer),"execute").getStatus());
     }
 }
