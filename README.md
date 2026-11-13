@@ -59,6 +59,7 @@ tracer.trace("charge-card", () -> gateway.charge());   // marks the span as ERRO
 - `demo.Demo` demonstrates nested spans, async propagation, events, links, baggage, attributes and errors.
 - `demo.JdbcDemo` demonstrates JDBC instrumentation using an embedded H2 database.
 - `demo.HttpDemo` demonstrates synchronous and asynchronous HTTP client instrumentation using a local HTTP server.
+- `demo.ServletDemo` demonstrates servlet server instrumentation using `OpenTraceFilter` and embedded Tomcat.
 
 run the HTTP demo:
 ```bash
@@ -72,6 +73,11 @@ mvn -pl demo-app -am install
 mvn -f demo-app/pom.xml exec:java -Dexec.mainClass=demo.JdbcDemo
 ```
 
+run the Servlet demo:
+```bash
+mvn -pl demo-app -am install
+mvn -f demo-app/pom.xml exec:java -Dexec.mainClass=demo.ServletDemo
+```
 
 ## overhead
 `demo.Bench` [a rough harness] measures what one span costs: no tracing, sampled out, sampled in without and with the trace store.
