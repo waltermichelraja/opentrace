@@ -13,6 +13,7 @@
         <module>opentrace-core</module>
         <module>opentrace-jdbc</module>
         <module>opentrace-http</module>
+        <module>opentrace-servlet</module>
         <module>demo-app</module>
     </modules>
 
