@@ -55,10 +55,36 @@ tracer.trace("charge-card", () -> gateway.charge());   // marks the span as ERRO
 
 
 ## demos
-`demo-app` contains runnable examples [not part of the library]: `demo.Demo` walks through nested spans, async
-propagation, events, links, baggage, attributes and errors; `demo.HttpDemo` starts a local server on :8080
-(`curl localhost:8080/call`) to show trace propagation across an HTTP call.
+`demo-app` contains runnable examples [not part of the library]:
+- `demo.Demo` demonstrates nested spans, async propagation, events, links, baggage, attributes and errors.
+- `demo.HttpDemo` demonstrates synchronous and asynchronous HTTP client instrumentation using a local HTTP server.
+- `demo.JdbcDemo` demonstrates JDBC instrumentation using an embedded H2 database.
+- `demo.ServletDemo` demonstrates servlet server instrumentation using `OpenTraceFilter` and embedded Tomcat.
+- `demo.TraceAnnotationDemo` demonstrates interface-level and method-level `@Trace` annotations, custom span names, and nested proxy calls.
 
+run the HTTP demo:
+```bash
+mvn -pl demo-app -am package
+java -cp opentrace-core/target/classes:opentrace-http/target/classes:demo-app/target/classes demo.HttpDemo
+```
+
+run the JDBC demo:
+```bash
+mvn -pl demo-app -am install
+mvn -f demo-app/pom.xml exec:java -Dexec.mainClass=demo.JdbcDemo
+```
+
+run the servlet demo:
+```bash
+mvn -pl demo-app -am install
+mvn -f demo-app/pom.xml exec:java -Dexec.mainClass=demo.ServletDemo
+```
+
+run the annotation demo:
+```bash
+mvn -pl demo-app -am install
+mvn -f demo-app/pom.xml exec:java -Dexec.mainClass=demo.TraceAnnotationDemo
+```
 
 ## overhead
 `demo.Bench` [a rough harness] measures what one span costs: no tracing, sampled out, sampled in without and with the trace store.
@@ -73,7 +99,7 @@ note: running it through `mvn exec:java` adds noise from maven's own JVM.
 
 ## OTLP exporter
 for setup instructions and manual verification against an OpenTelemetry
-collector, see [OTLP Collector Verification](docs/otlp-collector.md).
+collector, see [OTLP collector cerification](docs/otlp-collector.md).
 
 
 ```

@@ -1,6 +1,7 @@
 package demo;
 
 import io.opentrace.core.instrumentation.SelfAware;
+import io.opentrace.core.instrumentation.Trace;
 
 public class DemoServiceImpl implements DemoService, SelfAware<DemoService>{
 
@@ -17,7 +18,11 @@ public class DemoServiceImpl implements DemoService, SelfAware<DemoService>{
     }
 
     @Override
+    @Trace("service.process")
     public void process(){
-        try{Thread.sleep(20);}catch(Exception ignored){}
+        try{Thread.sleep(20);}catch(InterruptedException e){
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Service processing was interrupted",e);
+        }
     }
 }
