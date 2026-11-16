@@ -10,18 +10,27 @@ import io.opentrace.core.sampling.ProbabilitySampler;
 import io.opentrace.core.sampling.Sampler;
 
 public final class OpenTraceBuilder{
-    private int batchSize=100;
-    private int queueCapacity=10000;
+    private static final int DEFAULT_BATCH_SIZE=100;
+    private static final int DEFAULT_QUEUE_CAPACITY=10000;
+    private static final int DEFAULT_MAX_STORED_TRACES=1000;
+    private static final int DEFAULT_MAX_SPAN_NAMES=1000;
+
+    private static final String DEFAULT_SERVICE_NAME="unknown-service";
+    private static final String DEFAULT_ENVIRONMENT="dev";
+    private static final String DEFAULT_SERVICE_VERSION="0.0.1";
+
+    private int batchSize=DEFAULT_BATCH_SIZE;
+    private int queueCapacity=DEFAULT_QUEUE_CAPACITY;
     private SpanExporter exporter=new ConsoleExporter();
 
-    private String serviceName="unknown-service";
-    private String environment="dev";
-    private String serviceVersion="0.0.1";
+    private String serviceName=DEFAULT_SERVICE_NAME;
+    private String environment=DEFAULT_ENVIRONMENT;
+    private String serviceVersion=DEFAULT_SERVICE_VERSION;
 
     private Sampler sampler=new AlwaysOnSampler();
     private boolean exportEnabled=true;
-    private int maxStoredTraces=1000;
-    private int maxSpanNames=1000;
+    private int maxStoredTraces=DEFAULT_MAX_STORED_TRACES;
+    private int maxSpanNames=DEFAULT_MAX_SPAN_NAMES;
 
     public OpenTraceBuilder serviceName(String name){
         this.serviceName=requireText(name,"serviceName");
@@ -65,16 +74,21 @@ public final class OpenTraceBuilder{
     }
 
     public OpenTrace build(){
-        OpenTraceConfig config=new OpenTraceConfig(batchSize, queueCapacity, exporter, sampler);
         Map<String,String> attrs=new LinkedHashMap<>();
-        attrs.put("service.name", serviceName);
-        attrs.put("service.version", serviceVersion);
-        attrs.put("deployment.environment", environment);
+        attrs.put("service.name",serviceName);
+        attrs.put("service.version",serviceVersion);
+        attrs.put("deployment.environment",environment);
         Resource resource=new Resource(attrs);
-        config.resource=resource;
-        config.exportEnabled=this.exportEnabled;
-        config.maxStoredTraces=this.maxStoredTraces;
-        config.maxSpanNames=this.maxSpanNames;
+        OpenTraceConfig config=new OpenTraceConfig(
+            batchSize,
+            queueCapacity,
+            exporter,
+            sampler,
+            resource,
+            exportEnabled,
+            maxStoredTraces,
+            maxSpanNames
+        );
         return new OpenTrace(config);
     }
 

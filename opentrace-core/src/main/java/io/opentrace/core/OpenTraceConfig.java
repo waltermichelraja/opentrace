@@ -8,15 +8,28 @@ final class OpenTraceConfig{
     final int queueCapacity;
     final SpanExporter exporter;
     final Sampler sampler;
-    Resource resource;
-    boolean exportEnabled=true;
-    int maxStoredTraces;
-    int maxSpanNames;
+    final Resource resource;
+    final boolean exportEnabled;
+    final int maxStoredTraces;
+    final int maxSpanNames;
 
-    OpenTraceConfig(int batchSize, int queueCapacity, SpanExporter exporter, Sampler sampler){
+    OpenTraceConfig(
+        int batchSize,
+        int queueCapacity,
+        SpanExporter exporter,
+        Sampler sampler,
+        Resource resource,
+        boolean exportEnabled,
+        int maxStoredTraces,
+        int maxSpanNames
+    ){
         this.batchSize=batchSize;
         this.queueCapacity=queueCapacity;
         this.exporter=exporter;
         this.sampler=sampler;
+        this.resource=resource;
+        this.exportEnabled=exportEnabled;
+        this.maxStoredTraces=maxStoredTraces;
+        this.maxSpanNames=maxSpanNames;
     }
 }
