@@ -24,34 +24,44 @@ public final class OpenTraceBuilder{
     private int maxSpanNames=1000;
 
     public OpenTraceBuilder serviceName(String name){
-        this.serviceName=name;
+        this.serviceName=requireText(name,"serviceName");
         return this;
     }
 
     public OpenTraceBuilder environment(String env){
-        this.environment=env;
+        this.environment=requireText(env,"environment");
         return this;
     }
 
     public OpenTraceBuilder serviceVersion(String version){
-        this.serviceVersion=version;
+        this.serviceVersion=requireText(version,"serviceVersion");
         return this;
     }
 
     public OpenTraceBuilder batchSize(int batchSize){
+        if(batchSize<=0){throw new IllegalArgumentException("batchSize must be positive");}
         this.batchSize=batchSize;
         return this;
     }
 
     public OpenTraceBuilder queueCapacity(int queueCapacity){
+        if(queueCapacity<=0){throw new IllegalArgumentException("queueCapacity must be positive");}
         this.queueCapacity=queueCapacity;
         return this;
     }
 
     public OpenTraceBuilder exporter(SpanExporter exporter){
         if(!exportEnabled){throw new IllegalStateException("exporter disabled, call enableExporter() before setting exporter.");}
+        if(exporter==null){throw new IllegalArgumentException("exporter cannot be null");}
         this.exporter=exporter;
         return this;
+    }
+
+    private static String requireText(String value,String name){
+        if(value==null||value.isBlank()){
+            throw new IllegalArgumentException(name+" cannot be null or blank");
+        }
+        return value;
     }
 
     public OpenTrace build(){
