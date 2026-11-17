@@ -249,4 +249,50 @@ class PropagationTest{
             Locale.setDefault(old);
         }
     }
+
+    @Test
+    void contextCopiesBaggageAtConstruction(){
+        Map<String,String> baggage=new HashMap<>();
+        baggage.put("tenant","original");
+        var context=new OpenTraceContext(
+            TraceId.fromLong(1),
+            10L,
+            baggage
+        );
+        baggage.put("tenant","modified");
+        baggage.put("new-key","new-value");
+        assertEquals("original",context.getBaggage().get("tenant"));
+        assertFalse(context.getBaggage().containsKey("new-key"));
+    }
+
+    @Test
+    void contextBaggageCannotBeModified(){
+        var context=new OpenTraceContext(
+            TraceId.fromLong(1),
+            10L,
+            Map.of("tenant","original")
+        );
+        assertThrows(
+            UnsupportedOperationException.class,
+            ()->context.getBaggage().put("tenant","modified")
+        );
+    }
+
+    @Test
+    void contextRejectsNullTraceId(){
+        assertThrows(
+            NullPointerException.class,
+            ()->new OpenTraceContext(null,10L,Map.of())
+        );
+    }
+
+    @Test
+    void contextAcceptsNullBaggageAsEmpty(){
+        var context=new OpenTraceContext(
+            TraceId.fromLong(1),
+            10L,
+            null
+        );
+        assertTrue(context.getBaggage().isEmpty());
+    }
 }
