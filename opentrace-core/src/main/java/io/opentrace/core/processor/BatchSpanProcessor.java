@@ -14,15 +14,17 @@ public final class BatchSpanProcessor implements SpanProcessor{
     private final BlockingQueue<Trace> queue;
     private final SpanExporter exporter;
     private final int batchSize;
+    private final Object lifecycleLock=new Object();
 
     private final AtomicLong exported=new AtomicLong();
     private final AtomicLong dropped=new AtomicLong();
     private final AtomicLong failed=new AtomicLong();
 
     private volatile boolean running=true;
+    private boolean accepting=true;
     private final Thread worker;
 
-    public BatchSpanProcessor(int batchSize,int queueCapacity, SpanExporter exporter){
+    public BatchSpanProcessor(int batchSize,int queueCapacity,SpanExporter exporter){
         this.queue=new LinkedBlockingQueue<>(queueCapacity);
         this.exporter=exporter;
         this.batchSize=batchSize;
@@ -33,30 +35,40 @@ public final class BatchSpanProcessor implements SpanProcessor{
 
     @Override
     public void onEnd(Trace trace){
-        if(!queue.offer(trace)){
-            long n=dropped.incrementAndGet();
-            if(n==1 || n%1000==0){
-                System.err.println("opentrace: export queue full, "+n+" trace(s) dropped so far");
+        synchronized(lifecycleLock){
+            if(!accepting){
+                dropped.incrementAndGet();
+                return;
+            }
+            if(!queue.offer(trace)){
+                long n=dropped.incrementAndGet();
+                if(n==1||n%1000==0){
+                    System.err.println("opentrace: export queue full, "+n+" trace(s) dropped so far");
+                }
             }
         }
     }
 
     public ExportStats stats(){
-        return new ExportStats(exported.get(), dropped.get(), failed.get());
+        return new ExportStats(exported.get(),dropped.get(),failed.get());
     }
 
     private void runWorker(){
-        try{
-            while(running || !queue.isEmpty()){
+        boolean interrupted=false;
+        while(running||!queue.isEmpty()){
+            try{
                 List<Trace> batch=new ArrayList<>(batchSize);
                 queue.drainTo(batch,batchSize);
                 if(batch.isEmpty()){
-                    Trace t=queue.poll(100,TimeUnit.MILLISECONDS);
-                    if(t!=null){batch.add(t);}
+                    Trace trace=queue.poll(100,TimeUnit.MILLISECONDS);
+                    if(trace!=null){batch.add(trace);}
                 }
                 export(batch);
+            }catch(InterruptedException e){
+                interrupted=true;
             }
-        }catch(InterruptedException e){
+        }
+        if(interrupted){
             Thread.currentThread().interrupt();
         }
     }
@@ -74,11 +86,14 @@ public final class BatchSpanProcessor implements SpanProcessor{
 
     @Override
     public void shutdown(){
-        running=false;
-        try{worker.join(5000);}
-        catch(InterruptedException e){Thread.currentThread().interrupt();}
-        List<Trace> rest=new ArrayList<>();
-        queue.drainTo(rest);
-        export(rest);
+        synchronized(lifecycleLock){
+            accepting=false;
+            running=false;
+        }
+        try{
+            worker.join(5000);
+        }catch(InterruptedException e){
+            Thread.currentThread().interrupt();
+        }
     }
 }
