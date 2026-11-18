@@ -23,7 +23,7 @@ public final class AsyncSpanScope implements AutoCloseable{
     }
 
     public void error(Throwable throwable){
-        if(span!=null&&!closed.get()){
+        if(span!=null&&!closed.get()&&throwable!=null){
             span.status=SpanStatus.ERROR;
             span.errorType=throwable.getClass().getSimpleName();
             span.errorMessage=throwable.getMessage();
