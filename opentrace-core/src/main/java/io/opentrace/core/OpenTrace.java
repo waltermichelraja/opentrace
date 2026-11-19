@@ -374,7 +374,7 @@ public final class OpenTrace{
     public java.util.Map<String,String> getAllBaggage(){
         TraceState state=current.get();
         if(state==null){return java.util.Collections.emptyMap();}
-        return java.util.Collections.unmodifiableMap(state.baggage);
+        return java.util.Collections.unmodifiableMap(new HashMap<>(state.baggage));
     }
 
     public List<Trace> getTraceList(){

@@ -295,4 +295,30 @@ class PropagationTest{
         );
         assertTrue(context.getBaggage().isEmpty());
     }
+
+    @Test
+    void getAllBaggageReturnsAnIndependentSnapshot(){
+        var t=tracer();
+        try(var root=t.root("root")){
+            t.putBaggage("tenant","original");
+            Map<String,String> snapshot=t.getAllBaggage();
+            t.putBaggage("tenant","modified");
+            t.putBaggage("new-key","new-value");
+            assertEquals("original",snapshot.get("tenant"));
+            assertFalse(snapshot.containsKey("new-key"));
+        }
+    }
+
+    @Test
+    void getAllBaggageSnapshotCannotBeModified(){
+        var t=tracer();
+        try(var root=t.root("root")){
+            t.putBaggage("tenant","original");
+            Map<String,String> snapshot=t.getAllBaggage();
+            assertThrows(
+                UnsupportedOperationException.class,
+                ()->snapshot.put("tenant","modified")
+            );
+        }
+    }
 }
