@@ -1,5 +1,7 @@
 package io.opentrace.core.metrics;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -40,7 +42,7 @@ public final class SpanMetricsCollector{
     }
 
     public Map<String,SpanMetrics> getMetrics(){
-        return metrics;
+        return Collections.unmodifiableMap(new HashMap<>(metrics));
     }
 
     @Override
