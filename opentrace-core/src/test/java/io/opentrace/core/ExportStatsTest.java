@@ -1,5 +1,6 @@
 package io.opentrace.core;
 
+import io.opentrace.core.TestSupport.CapturingExporter;
 import io.opentrace.core.exporter.SpanExporter;
 import org.junit.jupiter.api.Test;
 
@@ -33,6 +34,10 @@ class ExportStatsTest{
             assertTrue(blocker.entered.await(5,TimeUnit.SECONDS));
             for(int i=0;i<10;i++){try(var r=tracer.root("r"+i)){}}   // 2 fit in the queue, 8 are dropped
             assertEquals(8,tracer.getExportStats().dropped());
+            var liveStats=tracer.getExportStats();
+            assertEquals(2,liveStats.queueSize());
+            assertEquals(2,liveStats.queueCapacity());
+            assertTrue(liveStats.workerAlive());
         }finally{
             blocker.release.countDown();
         }
@@ -41,6 +46,9 @@ class ExportStatsTest{
         assertEquals(3,stats.exported());                      // 1 in flight + 2 queued
         assertEquals(8,stats.dropped());
         assertEquals(0,stats.failed());
+        assertEquals(0,stats.queueSize());
+        assertEquals(2,stats.queueCapacity());
+        assertFalse(stats.workerAlive());
     }
 
     @Test
@@ -74,6 +82,9 @@ class ExportStatsTest{
         assertEquals(0,stats.exported());
         assertEquals(0,stats.dropped());
         assertEquals(0,stats.failed());
+        assertEquals(0,stats.queueSize());
+        assertEquals(0,stats.queueCapacity());
+        assertFalse(stats.workerAlive());
     }
 
     @Test

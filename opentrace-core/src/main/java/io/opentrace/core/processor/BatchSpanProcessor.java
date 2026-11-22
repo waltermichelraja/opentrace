@@ -50,7 +50,14 @@ public final class BatchSpanProcessor implements SpanProcessor{
     }
 
     public ExportStats stats(){
-        return new ExportStats(exported.get(),dropped.get(),failed.get());
+        return new ExportStats(
+            exported.get(),
+            dropped.get(),
+            failed.get(),
+            queue.size(),
+            queue.size()+queue.remainingCapacity(),
+            worker.isAlive()
+        );
     }
 
     private void runWorker(){
