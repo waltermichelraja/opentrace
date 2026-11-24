@@ -19,6 +19,8 @@ public final class BatchSpanProcessor implements SpanProcessor{
     private final AtomicLong exported=new AtomicLong();
     private final AtomicLong dropped=new AtomicLong();
     private final AtomicLong failed=new AtomicLong();
+    private volatile String lastFailureType;
+    private volatile String lastFailureMessage;
 
     private volatile boolean running=true;
     private boolean accepting=true;
@@ -56,7 +58,9 @@ public final class BatchSpanProcessor implements SpanProcessor{
             failed.get(),
             queue.size(),
             queue.size()+queue.remainingCapacity(),
-            worker.isAlive()
+            worker.isAlive(),
+            lastFailureType,
+            lastFailureMessage
         );
     }
 
@@ -87,6 +91,8 @@ public final class BatchSpanProcessor implements SpanProcessor{
             exported.addAndGet(batch.size());
         }catch(RuntimeException e){
             failed.addAndGet(batch.size());
+            lastFailureType=e.getClass().getSimpleName();
+            lastFailureMessage=e.getMessage();
             System.err.println("opentrace: exporter failed: "+e);
         }
     }

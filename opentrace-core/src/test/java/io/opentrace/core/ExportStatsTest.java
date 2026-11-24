@@ -64,14 +64,16 @@ class ExportStatsTest{
     }
 
     @Test
-    void tracesInFailedBatchesAreCountedAsFailed(){
-        SpanExporter alwaysFails=traces->{throw new RuntimeException("collector down");};
+    void failedExportsExposeLatestFailureDetails(){
+        SpanExporter alwaysFails=traces->{throw new IllegalStateException("collector unavailable");};
         var tracer=OpenTrace.builder().exporter(alwaysFails).batchSize(1).build();
         for(int i=0;i<3;i++){try(var r=tracer.root("r")){}}
         tracer.shutdown();
         var stats=tracer.getExportStats();
         assertEquals(3,stats.failed());
         assertEquals(0,stats.exported());
+        assertEquals("IllegalStateException",stats.lastFailureType());
+        assertEquals("collector unavailable",stats.lastFailureMessage());
     }
 
     @Test
@@ -85,6 +87,8 @@ class ExportStatsTest{
         assertEquals(0,stats.queueSize());
         assertEquals(0,stats.queueCapacity());
         assertFalse(stats.workerAlive());
+        assertNull(stats.lastFailureType());
+        assertNull(stats.lastFailureMessage());
     }
 
     @Test
