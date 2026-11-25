@@ -12,6 +12,7 @@ import java.io.PrintStream;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.opentrace.core.TestSupport.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -133,7 +134,46 @@ class ExportStatsTest{
         assertTrue(stats.failed()>0);
         assertTrue(stats.workerAlive());
         assertEquals(ExportHealth.DEGRADED,stats.health());
-
         tracer.shutdown();
+    }
+
+    @Test
+    void successfulExportRestoresHealthyStatusWithoutResettingFailureCount() throws Exception{
+        var attempts=new AtomicInteger();
+        SpanExporter failsOnce=traces->{
+            if(attempts.incrementAndGet()==1){
+                throw new IllegalStateException("temporary failure");
+            }
+        };
+        var tracer=OpenTrace.builder()
+            .exporter(failsOnce)
+            .batchSize(1)
+            .build();
+        try{
+            try(var r=tracer.root("first")){}
+            long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);
+            ExportStats stats;
+            do{
+                stats=tracer.getExportStats();
+                if(stats.failed()>0){break;}
+                Thread.sleep(10);
+            }while(System.nanoTime()<deadline);
+            assertEquals(1,stats.failed());
+            assertEquals(ExportHealth.DEGRADED,stats.health());
+            try(var r=tracer.root("second")){}
+            deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);
+            do{
+                stats=tracer.getExportStats();
+                if(stats.exported()>0){break;}
+                Thread.sleep(10);
+            }while(System.nanoTime()<deadline);
+            assertEquals(1,stats.exported());
+            assertEquals(1,stats.failed());
+            assertEquals(ExportHealth.HEALTHY,stats.health());
+            assertEquals("IllegalStateException",stats.lastFailureType());
+            assertEquals("temporary failure",stats.lastFailureMessage());
+        }finally{
+            tracer.shutdown();
+        }
     }
 }

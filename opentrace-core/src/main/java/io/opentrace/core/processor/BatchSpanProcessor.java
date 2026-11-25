@@ -21,6 +21,7 @@ public final class BatchSpanProcessor implements SpanProcessor{
     private final AtomicLong failed=new AtomicLong();
     private volatile String lastFailureType;
     private volatile String lastFailureMessage;
+    private volatile boolean lastExportFailed;
 
     private volatile boolean running=true;
     private boolean accepting=true;
@@ -57,7 +58,7 @@ public final class BatchSpanProcessor implements SpanProcessor{
         ExportHealth health;
         if(!alive){
             health=ExportHealth.STOPPED;
-        }else if(failureCount>0){
+        }else if(lastExportFailed){
             health=ExportHealth.DEGRADED;
         }else{
             health=ExportHealth.HEALTHY;
@@ -100,8 +101,10 @@ public final class BatchSpanProcessor implements SpanProcessor{
         try{
             exporter.export(batch);
             exported.addAndGet(batch.size());
+            lastExportFailed=false;
         }catch(RuntimeException e){
             failed.addAndGet(batch.size());
+            lastExportFailed=true;
             lastFailureType=e.getClass().getSimpleName();
             lastFailureMessage=e.getMessage();
             System.err.println("opentrace: exporter failed: "+e);
