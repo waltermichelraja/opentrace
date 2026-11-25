@@ -2,6 +2,9 @@ package io.opentrace.core;
 
 import io.opentrace.core.TestSupport.CapturingExporter;
 import io.opentrace.core.exporter.SpanExporter;
+import io.opentrace.core.processor.ExportHealth;
+import io.opentrace.core.processor.ExportStats;
+
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -61,6 +64,7 @@ class ExportStatsTest{
         assertEquals(20,stats.exported());
         assertEquals(0,stats.dropped());
         assertEquals(0,stats.failed());
+        assertEquals(ExportHealth.STOPPED,stats.health());
     }
 
     @Test
@@ -74,6 +78,7 @@ class ExportStatsTest{
         assertEquals(0,stats.exported());
         assertEquals("IllegalStateException",stats.lastFailureType());
         assertEquals("collector unavailable",stats.lastFailureMessage());
+        assertEquals(ExportHealth.STOPPED,stats.health());
     }
 
     @Test
@@ -110,5 +115,25 @@ class ExportStatsTest{
         long warnings=captured.toString().lines().filter(l->l.contains("export queue full")).count();
         assertTrue(tracer.getExportStats().dropped()>4000);
         assertTrue(warnings>=1 && warnings<=8,"warnings="+warnings);
+    }
+
+    @Test
+    void exportFailuresDegradeHealthWhileWorkerIsAlive() throws Exception{
+        SpanExporter alwaysFails=traces->{throw new IllegalStateException("collector unavailable");};
+        var tracer=OpenTrace.builder().exporter(alwaysFails).batchSize(1).build();
+        try(var r=tracer.root("failure")){}
+        long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);
+        ExportStats stats;
+        do{
+            stats=tracer.getExportStats();
+            if(stats.failed()>0){break;}
+            Thread.sleep(10);
+        }while(System.nanoTime()<deadline);
+
+        assertTrue(stats.failed()>0);
+        assertTrue(stats.workerAlive());
+        assertEquals(ExportHealth.DEGRADED,stats.health());
+
+        tracer.shutdown();
     }
 }

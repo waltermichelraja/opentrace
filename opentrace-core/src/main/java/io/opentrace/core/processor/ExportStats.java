@@ -8,10 +8,11 @@ public record ExportStats(
     int queueCapacity,
     boolean workerAlive,
     String lastFailureType,
-    String lastFailureMessage
+    String lastFailureMessage,
+    ExportHealth health
 ){
     public ExportStats(long exported,long dropped,long failed){
-        this(exported,dropped,failed,0,0,false,null,null);
+        this(exported,dropped,failed,0,0,false,null,null,ExportHealth.HEALTHY);
     }
 
     public ExportStats(
@@ -22,6 +23,6 @@ public record ExportStats(
         int queueCapacity,
         boolean workerAlive
     ){
-        this(exported,dropped,failed,queueSize,queueCapacity,workerAlive,null,null);
+        this(exported,dropped,failed,queueSize,queueCapacity,workerAlive,null,null,ExportHealth.HEALTHY);
     }
 }

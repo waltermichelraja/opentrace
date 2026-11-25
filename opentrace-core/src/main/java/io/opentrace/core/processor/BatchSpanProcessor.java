@@ -52,15 +52,26 @@ public final class BatchSpanProcessor implements SpanProcessor{
     }
 
     public ExportStats stats(){
+        long failureCount=failed.get();
+        boolean alive=worker.isAlive();
+        ExportHealth health;
+        if(!alive){
+            health=ExportHealth.STOPPED;
+        }else if(failureCount>0){
+            health=ExportHealth.DEGRADED;
+        }else{
+            health=ExportHealth.HEALTHY;
+        }
         return new ExportStats(
             exported.get(),
             dropped.get(),
-            failed.get(),
+            failureCount,
             queue.size(),
             queue.size()+queue.remainingCapacity(),
-            worker.isAlive(),
+            alive,
             lastFailureType,
-            lastFailureMessage
+            lastFailureMessage,
+            health
         );
     }
 
