@@ -305,9 +305,16 @@ public final class OpenTrace{
                 syntheticParent.spanId=captured.stack.peek().spanId;
                 childState.stack.push(syntheticParent);
             }
+            TraceState previous=current.get();
             current.set(childState);
             try{task.run();}
-            finally{current.remove();}
+            finally{
+                if(previous==null){
+                    current.remove();
+                }else{
+                    current.set(previous);
+                }
+            }
         };
     }
 
@@ -321,9 +328,16 @@ public final class OpenTrace{
                 syntheticParent.spanId=captured.stack.peek().spanId;
                 childState.stack.push(syntheticParent);
             }
+            TraceState previous=current.get();
             current.set(childState);
             try{return task.get();}
-            finally{current.remove();}
+            finally{
+                if(previous==null){
+                    current.remove();
+                }else{
+                    current.set(previous);
+                }
+            }
         };
     }
 

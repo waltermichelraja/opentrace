@@ -50,6 +50,42 @@ class AsyncPropagationTest{
     }
 
     @Test
+    void wrappedTaskRestoresPreviousWorkerContext() throws Exception{
+        var tracer=tracer();
+        ExecutorService pool=Executors.newSingleThreadExecutor();
+
+        OpenTraceContext workerContext;
+        OpenTraceContext callerContext;
+
+        try(var root=tracer.root("caller-root")){
+            callerContext=tracer.currentContext();
+
+            Runnable wrapped=tracer.wrap(()->{
+                assertNotNull(tracer.currentContext());
+                assertEquals(callerContext.getTraceId(),tracer.currentContext().getTraceId());
+            });
+
+            workerContext=pool.submit(()->{
+                try(var rootScope=tracer.root("worker-root")){
+                    OpenTraceContext before=tracer.currentContext();
+
+                    wrapped.run();
+
+                    OpenTraceContext after=tracer.currentContext();
+                    assertNotNull(after);
+                    assertEquals(before.getTraceId(),after.getTraceId());
+
+                    return before;
+                }
+            }).get();
+        }finally{
+            pool.shutdown();
+        }
+
+        assertNotEquals(callerContext.getTraceId(),workerContext.getTraceId());
+    }
+
+    @Test
     void threadStateDoesNotLeakIntoPoolThreads() throws Exception{
         var tracer=tracer();
         ExecutorService pool=Executors.newSingleThreadExecutor();
