@@ -46,4 +46,18 @@ class SpanConcurrencyTest{
         assertEquals(2000,s.getLinks().size());
         assertEquals(2000,s.getEvents().size());
     }
+
+    @Test
+    void eventsSnapshotIsReadOnly(){
+        Span s=new Span();
+        s.addEvent("event");
+        assertThrows(UnsupportedOperationException.class,()->s.getEvents().add(new SpanEvent("external",0)));
+    }
+
+    @Test
+    void linksSnapshotIsReadOnly(){
+        Span s=new Span();
+        s.addLink(TraceId.fromLong(1),2);
+        assertThrows(UnsupportedOperationException.class,()->s.getLinks().add(new SpanLink(TraceId.fromLong(3),4)));
+    }
 }

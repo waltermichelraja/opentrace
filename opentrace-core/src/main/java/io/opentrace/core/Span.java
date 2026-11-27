@@ -58,14 +58,17 @@ public final class Span{
         events.add(new SpanEvent(name,timestamp));
     }
     public java.util.List<SpanEvent> getEvents(){
-        return events;
+        synchronized(events){
+            return java.util.Collections.unmodifiableList(new java.util.ArrayList<>(events));
+        }
     }
     public void addLink(TraceId traceId, long spanId){
         links.add(new SpanLink(traceId, spanId));
     }
-
     public java.util.List<SpanLink> getLinks(){
-        return links;
+        synchronized(links){
+            return java.util.Collections.unmodifiableList(new java.util.ArrayList<>(links));
+        }
     }
 
     void start(){
