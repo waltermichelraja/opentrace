@@ -127,4 +127,76 @@ class AsyncSpanScopeTest{
                 .count()
         );
     }
+
+    @Test
+    void concurrentRootAndAsyncSpanCompletionProducesSingleCompleteTrace()throws InterruptedException{
+        for(int iteration=0;iteration<50;iteration++){
+            OpenTrace tracer=OpenTrace.builder().build();
+            RootScope root=tracer.root("root");
+            AsyncSpanScope async1=tracer.asyncSpan("async.one");
+            AsyncSpanScope async2=tracer.asyncSpan("async.two");
+            CountDownLatch ready=new CountDownLatch(3);
+            CountDownLatch start=new CountDownLatch(1);
+            Thread rootCloser=new Thread(()->{
+                ready.countDown();
+                try{
+                    start.await();
+                }catch(InterruptedException e){
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+                root.close();
+            });
+            Thread asyncCloser1=new Thread(()->{
+                ready.countDown();
+                try{
+                    start.await();
+                }catch(InterruptedException e){
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+                async1.close();
+            });
+            Thread asyncCloser2=new Thread(()->{
+                ready.countDown();
+                try{
+                    start.await();
+                }catch(InterruptedException e){
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+                async2.close();
+            });
+            rootCloser.start();
+            asyncCloser1.start();
+            asyncCloser2.start();
+            assertTrue(ready.await(5,TimeUnit.SECONDS));
+            start.countDown();
+            rootCloser.join(5000);
+            asyncCloser1.join(5000);
+            asyncCloser2.join(5000);
+            assertFalse(rootCloser.isAlive());
+            assertFalse(asyncCloser1.isAlive());
+            assertFalse(asyncCloser2.isAlive());
+            assertEquals(1,tracer.getTraceList().size());
+            Trace trace=tracer.getTraceList().get(0);
+            assertEquals(3,trace.spans.size());
+            assertEquals(
+                3,
+                trace.spans.stream()
+                    .map(Span::getSpanId)
+                    .distinct()
+                    .count()
+            );
+            Span rootSpan=trace.getRoot();
+            assertNotNull(rootSpan);
+            assertEquals(
+                2,
+                trace.spans.stream()
+                    .filter(span->span.getParentSpanId()==rootSpan.getSpanId())
+                    .count()
+            );
+            tracer.shutdown();
+        }
+    }
 }
